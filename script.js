@@ -11,7 +11,7 @@
      ------------------------------------------------------------------- */
   const CONFIG = {
     // Número de WhatsApp Business en formato internacional sin "+" ni espacios
-    whatsappNumber: '573000000000',
+    whatsappNumber: '573173020116',
     whatsappMessage: 'Hola Reality Studio, quiero cotizar un proyecto',
 
     // Endpoint del formulario de leads. Ejemplos válidos:
@@ -107,8 +107,9 @@
       lastY = currentY;
     }, { passive: true });
 
-    // Los enlaces del nav apuntan a secciones dentro del lienzo horizontal:
-    // usamos scrollIntoView con inline:'start' para que funcione en ambos ejes.
+    // Scroll vertical nativo del navegador: no necesitamos calcular ejes,
+    // scrollIntoView normal es suficiente y funciona igual en cualquier
+    // dispositivo, sin dejar a nadie "atrapado" en una sección.
     document.querySelectorAll('[data-nav-link]').forEach((link) => {
       link.addEventListener('click', (event) => {
         const targetId = link.getAttribute('href');
@@ -116,47 +117,54 @@
         const target = document.querySelector(targetId);
         if (!target) return;
         event.preventDefault();
-        target.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'start' });
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
     });
   }
 
   /* -------------------------------------------------------------------
-     3. LIENZO HORIZONTAL — rueda vertical → scroll horizontal (desktop)
+     2.5 INDICADOR DE SECCIÓN ACTIVA — resalta el link del nav correspondiente
      ------------------------------------------------------------------- */
-  function initHorizontalScroll() {
-    const track = document.getElementById('horizontalScroll');
+  function initActiveNavLink() {
+    const links = Array.from(document.querySelectorAll('[data-nav-link][href^="#"]'));
+    if (!links.length) return;
+
+    const sections = links
+      .map((link) => document.querySelector(link.getAttribute('href')))
+      .filter(Boolean);
+    if (!sections.length) return;
+
+    const linkFor = (id) => links.find((link) => link.getAttribute('href') === `#${id}`);
+
+    if (!('IntersectionObserver' in window)) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        const link = linkFor(entry.target.id);
+        if (!link) return;
+        link.classList.toggle('is-active', entry.isIntersecting);
+      });
+    }, { rootMargin: '-45% 0px -45% 0px', threshold: 0 });
+
+    sections.forEach((section) => observer.observe(section));
+  }
+
+  /* -------------------------------------------------------------------
+     3. PROGRESO DE SCROLL — barra vertical de avance de página
+     ------------------------------------------------------------------- */
+  function initScrollProgress() {
     const progressBar = document.getElementById('scrollProgressBar');
-    if (!track) return;
+    if (!progressBar) return;
 
-    const isDesktop = () => window.matchMedia('(min-width: 769px)').matches;
-
-    track.addEventListener('wheel', (event) => {
-      if (!isDesktop()) return; // en móvil se apila verticalmente, scroll nativo
-      // Si el gesto ya es predominantemente horizontal (trackpad), lo dejamos nativo.
-      if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
-      track.scrollLeft += event.deltaY;
-    }, { passive: true });
-
-    // Navegación con flechas del teclado cuando el foco está dentro del lienzo
-    track.addEventListener('keydown', (event) => {
-      if (!isDesktop()) return;
-      const panelWidth = track.clientWidth;
-      if (event.key === 'ArrowRight') track.scrollBy({ left: panelWidth, behavior: 'smooth' });
-      if (event.key === 'ArrowLeft') track.scrollBy({ left: -panelWidth, behavior: 'smooth' });
-    });
-
-    const updateProgress = () => {
-      if (!progressBar) return;
-      if (!isDesktop()) { progressBar.style.width = '0%'; return; }
-      const max = track.scrollWidth - track.clientWidth;
-      const pct = max > 0 ? (track.scrollLeft / max) * 100 : 0;
-      progressBar.style.width = `${pct}%`;
+    const update = () => {
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const pct = max > 0 ? (window.scrollY / max) * 100 : 0;
+      progressBar.style.width = `${Math.min(Math.max(pct, 0), 100)}%`;
     };
 
-    track.addEventListener('scroll', updateProgress, { passive: true });
-    window.addEventListener('resize', updateProgress);
-    updateProgress();
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    update();
   }
 
   /* -------------------------------------------------------------------
@@ -210,7 +218,7 @@
   function initGoldOrbit() {
     const orbit = document.getElementById('logoOrbit');
     const logo = document.getElementById('logo3d');
-    if (!orbit || !logo) return;
+    if (!orbit || !logo) return null;
 
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -230,7 +238,7 @@
     }
 
     let pointer = { x: 0, y: 0 }; // -1..1, relativo al centro de la órbita
-    let portalActive = false;
+    let frozen = false;
 
     orbit.addEventListener('pointermove', (event) => {
       const rect = orbit.getBoundingClientRect();
@@ -251,7 +259,7 @@
 
     let t = 0;
     function animate() {
-      if (!portalActive) {
+      if (!frozen) {
         t += 0.016;
         particles.forEach((p) => {
           const angle = t * p.speed + p.offset;
@@ -277,27 +285,217 @@
       window.requestAnimationFrame(animate);
     }
 
-    /* ---------------- EVENTO PORTAL — zoom + redirección ---------------- */
-    const enterPortal = () => {
-      if (portalActive) return;
-      portalActive = true;
-      logo.classList.add('is-portal-active');
+    // initPortalHall() usa esto para congelar la órbita y encoger el logo
+    // en el momento exacto en que el usuario cruza hacia el salón.
+    return {
+      setPortalActive(active) {
+        frozen = active;
+        logo.classList.toggle('is-portal-active', active);
+      },
+    };
+  }
+
+  /* -------------------------------------------------------------------
+     6.5. PORTAL 3D — escena WebGL con scroll-scrub (carga diferida)
+     ------------------------------------------------------------------- */
+  function initPortalScene(onSceneReady) {
+    const section = document.getElementById('experiencia-ra');
+    const canvas = document.getElementById('portalCanvas');
+    if (!section || !canvas) return;
+
+    // Respeta accesibilidad y dispositivos de gama baja: se queda con el
+    // starfield CSS estático que ya existe como fallback.
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    const supportsWebGL = (() => {
+      try {
+        const probe = document.createElement('canvas');
+        return !!(window.WebGLRenderingContext &&
+          (probe.getContext('webgl') || probe.getContext('experimental-webgl')));
+      } catch (_) {
+        return false;
+      }
+    })();
+    if (!supportsWebGL) return;
+
+    const isDesktop = () => window.matchMedia('(min-width: 769px)').matches;
+
+    let scene = null;
+    let loadStarted = false;
+    let ticking = false;
+
+    // El progreso de la escena 3D ahora se calcula siempre a partir del
+    // scroll vertical (antes había una rama separada para desktop basada en
+    // scroll horizontal — ya no existe ese eje, así que un solo cálculo
+    // sirve para todos los tamaños de pantalla).
+    function computeProgress() {
+      if (!scene) return;
+      const rect = section.getBoundingClientRect();
+      const vh = window.innerHeight || document.documentElement.clientHeight;
+      const progress = (vh - rect.top) / (vh + rect.height);
+      scene.setProgress(Math.min(Math.max(progress, 0), 1));
+    }
+
+    function onScrollOrResize() {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(() => {
+        computeProgress();
+        ticking = false;
+      });
+    }
+
+    function loadScene() {
+      if (loadStarted) return;
+      loadStarted = true;
+      import('./three-portal.js')
+        .then(({ createPortalScene }) => {
+          scene = createPortalScene({ canvas, isMobile: !isDesktop() });
+          section.classList.add('is-webgl-active');
+          computeProgress();
+
+          window.addEventListener('scroll', onScrollOrResize, { passive: true });
+          window.addEventListener('resize', onScrollOrResize);
+
+          const orbit = document.getElementById('logoOrbit');
+          if (orbit) {
+            orbit.addEventListener('pointermove', (event) => {
+              const rect = orbit.getBoundingClientRect();
+              const x = ((event.clientX - rect.left) / rect.width - 0.5) * 2;
+              const y = ((event.clientY - rect.top) / rect.height - 0.5) * 2;
+              scene.setPointer(x, y);
+            });
+          }
+
+          let isSectionVisible = false;
+          const visibilityObserver = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+              isSectionVisible = entry.isIntersecting;
+              scene.setActive(isSectionVisible && !document.hidden);
+            });
+          }, { threshold: 0.05 });
+          visibilityObserver.observe(section);
+
+          document.addEventListener('visibilitychange', () => {
+            scene.setActive(isSectionVisible && !document.hidden);
+          });
+
+          if (typeof onSceneReady === 'function') onSceneReady(scene);
+        })
+        .catch((err) => {
+          // Si falla la carga (CDN bloqueado, red lenta, etc.) el sitio
+          // conserva el starfield CSS sin ninguna ruptura visual.
+          console.warn('[Reality Studio] No se pudo cargar la escena 3D del portal:', err);
+        });
+    }
+
+    // Precarga la escena con antelación (aprox. un panel antes) para que
+    // esté lista sin jank cuando el usuario llegue a la sección.
+    const preloadObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          loadScene();
+          preloadObserver.disconnect();
+        }
+      });
+    }, { rootMargin: '30% 100% 30% 100%' });
+    preloadObserver.observe(section);
+  }
+
+  /* -------------------------------------------------------------------
+     6.6. SALÓN DEL PORTAL — puerta → gran salón con transición narrativa
+     ------------------------------------------------------------------- */
+  function initPortalHall(goldOrbit) {
+    const section = document.getElementById('experiencia-ra');
+    const frame = document.getElementById('portalFrame');
+    const doorStage = document.getElementById('doorStage');
+    const hallStage = document.getElementById('hallStage');
+    const backBtn = document.getElementById('hallBack');
+    const loader = document.getElementById('portalLoader');
+    const loaderWord = document.getElementById('portalLoaderWord');
+    if (!section || !frame || !doorStage || !hallStage) return null;
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const HALL_WORDS = ['ABRIENDO', 'CRUZANDO_UMBRAL', 'CORE_LOAD_TRUE', 'RENDER::SALON', '0x52534F', 'BIENVENIDO'];
+
+    let state = 'door'; // 'door' | 'transitioning' | 'hall'
+    let hallScene = null;
+
+    function runLoader(durationMs, callback) {
+      if (!loader || !loaderWord || prefersReducedMotion) {
+        window.setTimeout(callback, prefersReducedMotion ? 150 : 0);
+        return;
+      }
+      loader.classList.add('is-active');
+      let i = 0;
+      const intervalId = window.setInterval(() => {
+        loaderWord.textContent = HALL_WORDS[i % HALL_WORDS.length];
+        i += 1;
+      }, 100);
+      window.setTimeout(() => {
+        window.clearInterval(intervalId);
+        loader.classList.remove('is-active');
+        callback();
+      }, durationMs);
+    }
+
+    function enterHall() {
+      if (state !== 'door') return;
+      state = 'transitioning';
+
+      if (goldOrbit) goldOrbit.setPortalActive(true);
       if ('vibrate' in navigator) {
         try { navigator.vibrate(60); } catch (_) { /* silencioso */ }
       }
-      window.setTimeout(() => {
-        window.location.href = 'espacio-en-construccion.html';
-      }, 420);
-    };
 
-    logo.addEventListener('click', enterPortal);
-    logo.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        enterPortal();
-      }
+      runLoader(prefersReducedMotion ? 150 : 1100, () => {
+        doorStage.hidden = true;
+        hallStage.hidden = false;
+        section.classList.add('is-hall');
+        state = 'hall';
+        if (hallScene) hallScene.setHallMode(true);
+        if (backBtn) backBtn.focus();
+      });
+    }
+
+    function exitHall() {
+      if (state !== 'hall') return;
+      state = 'door';
+      hallStage.hidden = true;
+      doorStage.hidden = false;
+      section.classList.remove('is-hall');
+      if (hallScene) hallScene.setHallMode(false);
+      if (goldOrbit) goldOrbit.setPortalActive(false);
+      frame.focus();
+    }
+
+    // Clic o tap (y activación por teclado, nativa de <button>): funciona
+    // igual en PC y en celular. Ya NO interceptamos la rueda del mouse aquí:
+    // antes "cruzar con scroll" competía con el scroll normal de la página
+    // y era una de las causas de que el usuario quedara atrapado.
+    frame.addEventListener('click', enterHall);
+
+    if (backBtn) backBtn.addEventListener('click', exitHall);
+
+    // El remolino de partículas doradas necesita su propio seguimiento de
+    // puntero: #logoOrbit (usado para el paralaje en la puerta) queda oculto
+    // una vez dentro del salón y deja de recibir eventos de puntero.
+    section.addEventListener('pointermove', (event) => {
+      if (!hallScene || state !== 'hall') return;
+      const rect = section.getBoundingClientRect();
+      const x = ((event.clientX - rect.left) / rect.width - 0.5) * 2;
+      const y = ((event.clientY - rect.top) / rect.height - 0.5) * 2;
+      hallScene.setPointer(x, y);
     });
+
+    return {
+      connectScene(scene) {
+        hallScene = scene;
+        if (state === 'hall') hallScene.setHallMode(true);
+      },
+    };
   }
+
 
   /* -------------------------------------------------------------------
      7. FORMULARIO B2B — validación + envío (con o sin backend)
@@ -350,13 +548,195 @@
   }
 
   /* -------------------------------------------------------------------
-     8. WHATSAPP CTA — arma el enlace desde CONFIG
+     8. CTA ARCADE — botón "invasor" con esquive corto y accesible
      ------------------------------------------------------------------- */
-  function initWhatsappCta() {
-    const cta = document.getElementById('whatsappCta');
-    if (!cta) return;
+  function initArcadeCta() {
+    const wrapper = document.getElementById('arcadeCta');
+    const button = document.getElementById('arcadeCtaButton');
+    if (!wrapper || !button) return;
+
+    // Arma el enlace de WhatsApp desde CONFIG (mismo patrón que antes)
     const text = encodeURIComponent(CONFIG.whatsappMessage);
-    cta.setAttribute('href', `https://wa.me/${CONFIG.whatsappNumber}?text=${text}`);
+    button.setAttribute('href', `https://wa.me/${CONFIG.whatsappNumber}?text=${text}`);
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const isTouchDevice = window.matchMedia('(hover: none), (pointer: coarse)').matches;
+
+    // En móvil / reduced-motion: sin esquive. Grande, quieto, siempre listo
+    // para tocar de inmediato — no tiene sentido "huir" donde no hay cursor.
+    if (prefersReducedMotion || isTouchDevice) {
+      wrapper.classList.add('arcade-cta--static');
+      return;
+    }
+
+    const DODGE_RADIUS = 70;  // px — a qué distancia "siente" el cursor
+    const MAX_OFFSET = 46;    // px — qué tan lejos puede esquivar (esquive corto)
+    const MAX_DODGES = 2;     // se deja atrapar rápido, como pediste
+
+    let dodgeCount = 0;
+    let cooling = false;
+    let idleTimer = null;
+
+    document.addEventListener('pointermove', (event) => {
+      if (cooling || dodgeCount >= MAX_DODGES) return;
+
+      const rect = button.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dx = event.clientX - cx;
+      const dy = event.clientY - cy;
+      const dist = Math.hypot(dx, dy);
+      if (dist >= DODGE_RADIUS) return;
+
+      cooling = true;
+      dodgeCount += 1;
+
+      const angle = Math.atan2(dy, dx) + Math.PI; // dirección opuesta al cursor
+      const magnitude = MAX_OFFSET * (0.6 + Math.random() * 0.4);
+      wrapper.style.setProperty('--arcade-x', `${(Math.cos(angle) * magnitude).toFixed(1)}px`);
+      wrapper.style.setProperty('--arcade-y', `${(Math.sin(angle) * magnitude).toFixed(1)}px`);
+      wrapper.classList.add('is-dodging');
+
+      if (dodgeCount >= MAX_DODGES) {
+        wrapper.classList.add('is-caught'); // deja de esquivar, invita al clic
+      }
+
+      window.clearTimeout(idleTimer);
+      idleTimer = window.setTimeout(() => { dodgeCount = 0; }, 4000);
+      window.setTimeout(() => { cooling = false; }, 260);
+    }, { passive: true });
+
+    // El foco de teclado NUNCA dispara esquive: siempre vuelve a su posición base
+    button.addEventListener('focus', () => {
+      wrapper.style.setProperty('--arcade-x', '0px');
+      wrapper.style.setProperty('--arcade-y', '0px');
+      wrapper.classList.remove('is-dodging');
+    });
+  }
+
+  /* -------------------------------------------------------------------
+     8.5. SALA DE JUEGOS — lobby extensible de mini-juegos (carga bajo demanda)
+
+     Cada juego nuevo se agrega SOLO a este arreglo: una tarjeta en
+     #gameLobby con data-game-id="ese-id" activa el registro correspondiente.
+     No hay que tocar el resto del lobby para sumar títulos futuros.
+     ------------------------------------------------------------------- */
+  const GAMES = {
+    'defiende-marca': {
+      title: 'Defiende tu marca',
+      load: () => import('./arcade-game.js').then((m) => m.createArcadeGame),
+    },
+  };
+
+  function initGameLobby() {
+    const section = document.getElementById('juegos');
+    const lobby = document.getElementById('gameLobby');
+    const stage = document.getElementById('arcadeGame');
+    const closeBtn = document.getElementById('arcadeClose');
+    const canvas = document.getElementById('arcadeCanvas');
+    const overlay = document.getElementById('arcadeOverlay');
+    const overlayTitle = document.getElementById('arcadeOverlayTitle');
+    const overlayText = document.getElementById('arcadeOverlayText');
+    const playBtn = document.getElementById('arcadePlay');
+    const scoreEl = document.getElementById('arcadeScore');
+    const leftBtn = document.getElementById('arcadeLeft');
+    const rightBtn = document.getElementById('arcadeRight');
+    const shootBtn = document.getElementById('arcadeShoot');
+    if (!section || !lobby || !stage || !canvas || !overlay || !playBtn) return;
+
+    const defaultOverlayText = overlayText.textContent;
+    const loadedGames = {}; // cache: no recargamos el módulo si ya se jugó
+    let game = null;
+    let controlsBound = false;
+
+    function onScoreChange(score, lives, wave) {
+      if (scoreEl) scoreEl.textContent = `PUNTAJE: ${score} · VIDAS: ${lives} · OLEADA ${wave}`;
+    }
+
+    function onGameOver(finalScore, won) {
+      overlay.hidden = false;
+      overlayTitle.textContent = won ? '¡Los venciste a todos!' : 'Fin del juego';
+      overlayText.textContent =
+        `Puntaje final: ${finalScore}. ¿Y si tu próxima campaña fuera así de directa? ` +
+        'Escríbenos por el botón de WhatsApp.';
+      playBtn.querySelector('span').textContent = 'Jugar de nuevo';
+    }
+
+    function bindControlsOnce() {
+      if (controlsBound) return;
+      controlsBound = true;
+
+      playBtn.addEventListener('click', () => {
+        overlay.hidden = true;
+        if (game) game.start();
+      });
+
+      window.addEventListener('keydown', (event) => {
+        if (!game || stage.hidden) return;
+        if (event.key === 'ArrowLeft' || event.key === 'a' || event.key === 'A') game.setMove(-1);
+        if (event.key === 'ArrowRight' || event.key === 'd' || event.key === 'D') game.setMove(1);
+        if (event.key === ' ' || event.key === 'Enter') {
+          event.preventDefault();
+          game.shoot();
+        }
+      });
+
+      window.addEventListener('keyup', (event) => {
+        if (!game) return;
+        if (['ArrowLeft', 'ArrowRight', 'a', 'A', 'd', 'D'].includes(event.key)) game.setMove(0);
+      });
+
+      const pressAndHold = (el, dir) => {
+        if (!el) return;
+        el.addEventListener('pointerdown', () => { if (game) game.setMove(dir); });
+        el.addEventListener('pointerup', () => { if (game) game.setMove(0); });
+        el.addEventListener('pointerleave', () => { if (game) game.setMove(0); });
+      };
+      pressAndHold(leftBtn, -1);
+      pressAndHold(rightBtn, 1);
+      if (shootBtn) shootBtn.addEventListener('click', () => { if (game) game.shoot(); });
+
+      if (closeBtn) closeBtn.addEventListener('click', closeGame);
+    }
+
+    function closeGame() {
+      if (game) game.stop();
+      stage.hidden = true;
+      lobby.hidden = false;
+      overlay.hidden = false;
+      overlayText.textContent = defaultOverlayText;
+      playBtn.querySelector('span').textContent = 'Jugar';
+    }
+
+    async function openGame(gameId) {
+      const entry = GAMES[gameId];
+      if (!entry) return;
+
+      bindControlsOnce();
+      lobby.hidden = true;
+      stage.hidden = false;
+      overlay.hidden = false;
+      overlayTitle.textContent = entry.title;
+      overlayText.textContent = defaultOverlayText;
+      playBtn.querySelector('span').textContent = 'Jugar';
+      stage.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      try {
+        if (!loadedGames[gameId]) {
+          const createGame = await entry.load();
+          loadedGames[gameId] = createGame;
+        }
+        if (game) game.stop();
+        game = loadedGames[gameId]({ canvas, onScoreChange, onGameOver });
+      } catch (err) {
+        console.warn(`[Reality Studio] No se pudo cargar el juego "${gameId}":`, err);
+        overlayText.textContent = 'El juego no pudo cargar en este momento. Escríbenos igual, hablemos de tu proyecto.';
+      }
+    }
+
+    lobby.querySelectorAll('[data-game-id]').forEach((card) => {
+      card.addEventListener('click', () => openGame(card.dataset.gameId));
+    });
   }
 
   /* -------------------------------------------------------------------
@@ -401,12 +781,18 @@
   document.addEventListener('DOMContentLoaded', () => {
     initPreloader();
     initNav();
-    initHorizontalScroll();
+    initActiveNavLink();
+    initScrollProgress();
     initReveals();
     initStarfield();
-    initGoldOrbit();
+    const goldOrbit = initGoldOrbit();
+    const hallApi = initPortalHall(goldOrbit);
+    initPortalScene((scene) => {
+      if (hallApi) hallApi.connectScene(scene);
+    });
     initLeadForm();
-    initWhatsappCta();
+    initArcadeCta();
+    initGameLobby();
     initAnalytics();
     initMisc();
   });

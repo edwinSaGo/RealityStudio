@@ -23,8 +23,8 @@
 <meta name="twitter:image" content="https://realitystudio.lat/assets/img/og-cover.jpg">
 
 <!-- ============ Favicons ============ -->
-<link rel="icon" type="image/svg+xml" href="/assets/img/favicon.svg">
-<link rel="alternate icon" href="/assets/img/favicon.ico">
+<link rel="icon" type="image/svg+xml" href="img/favicon.png">
+<link rel="alternate icon" href="img/favicon.png">
 
 <!-- ============ TODO SEO: Verificaciones (ver INSTRUCCIONES.md) ============ -->
 <!-- <meta name="google-site-verification" content="PEGA_AQUI_TU_CODIGO_GSC"> -->
@@ -36,6 +36,9 @@
 <link rel="preconnect" href="https://api.fontshare.com" crossorigin>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<!-- ============ Preconnect a CDN de Three.js (carga diferida, ver script.js) ============ -->
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
 <!-- Clash Display + General Sans (Fontshare) -->
 <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@700,600&f[]=general-sans@400,500,600&display=swap">
@@ -64,6 +67,7 @@
   },
   "sameAs": [
     "https://www.instagram.com/realitystudio",
+    "https://www.facebook.com/realitystudio",
     "https://www.linkedin.com/company/realitystudio"
   ],
   "makesOffer": [
@@ -92,12 +96,14 @@
      NAVEGACIÓN
      ============================================================ -->
 <header class="nav" id="siteNav">
+  <img src="img/RealityStudioLogo.png" alt="Logo de reality Studio" style="width: 5%;">
   <a href="#top" class="nav__logo" aria-label="Reality Studio, inicio">REALITY<em>·</em>STUDIO</a>
   <nav class="nav__links" aria-label="Navegación principal">
     <a href="#enfoque" data-nav-link>Enfoque</a>
     <a href="#servicios" data-nav-link>Servicios</a>
     <a href="#software" data-nav-link>Software</a>
     <a href="#experiencia-ra" data-nav-link>Experiencia RA</a>
+    <a href="#juegos" data-nav-link>Juegos</a>
     <a href="#contacto" class="btn nav__cta" data-nav-link>Hablemos</a>
   </nav>
 </header>
@@ -113,8 +119,8 @@
       autoplay muted loop playsinline
       aria-hidden="true"
       id="heroVideo">
-      <!-- 🔧 EDITA AQUÍ: reemplaza por tu video institucional (mp4, <15MB, 1920x1080) -->
-      <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4">
+      
+      <source src="video/portadaweb_01.mp4" type="video/mp4">
     </video>
     <div class="hero__scrim"></div>
     <div class="hero__content">
@@ -134,12 +140,11 @@
   </section>
 
   <!-- ============================================================
-       LIENZO HORIZONTAL / PILA VERTICAL EN MÓVIL
+       SECCIONES — scroll vertical nativo, sin secuestro de rueda
        ============================================================ -->
-  <div class="horizontal-scroll" id="horizontalScroll">
 
-    <!-- BLOQUE 1 — ENFOQUE -->
-    <section class="panel panel--jade" id="enfoque" aria-label="Quiénes somos y enfoque estratégico">
+  <!-- BLOQUE 1 — ENFOQUE -->
+  <section class="panel panel--jade" id="enfoque" aria-label="Quiénes somos y enfoque estratégico">
       <div class="panel__inner reveal">
         <p class="eyebrow">Enfoque estratégico</p>
         <h2 class="panel__title">No diseñamos páginas.<br>Diseñamos decisiones de compra.</h2>
@@ -185,20 +190,88 @@
       </div>
     </section>
 
-    <!-- BLOQUE 4 — EXPERIMENTA LA RA (sección mágica / portal) -->
-    <section class="panel panel--space" id="experiencia-ra" aria-label="Experimenta la Realidad Aumentada">
-      <div class="starfield" id="starfield" aria-hidden="true"></div>
-      <div class="portal-stage">
-        <p class="eyebrow">Experimenta la RA</p>
-        <h2 class="portal-stage__title">Entra al portal. Así se siente trabajar con nosotros.</h2>
-        <div class="logo-orbit" id="logoOrbit">
-          <button class="logo-3d" id="logo3d" aria-label="Entrar al portal de Reality Studio" type="button">
-            <span class="logo-3d__face logo-3d__face--edge" aria-hidden="true"></span>
-            <span class="logo-3d__face logo-3d__face--back" aria-hidden="true">RS</span>
-            <span class="logo-3d__face">RS</span>
-          </button>
+    <!-- BLOQUE 4 — EXPERIMENTA LA RA — narrativa cinematográfica por pasos.
+         .ra-bg queda "pegado" a pantalla (position: sticky) mientras
+         .ra-steps avanza con el scroll normal del usuario: cada paso
+         cuenta una parte de la historia sobre el mismo fondo 3D. -->
+    <section class="panel panel--space ra-experience" id="experiencia-ra" aria-label="Experimenta la Realidad Aumentada">
+
+      <div class="ra-bg" id="raBg">
+        <div class="starfield" id="starfield" aria-hidden="true"></div>
+        <canvas class="portal-canvas" id="portalCanvas" aria-hidden="true"></canvas>
+
+        <!-- Overlay de carga — reutiliza el efecto de palabras rápidas del preloader -->
+        <div class="portal-loader" id="portalLoader" aria-hidden="true">
+          <p class="portal-loader__word" id="portalLoaderWord">ABRIENDO</p>
         </div>
-        <p class="portal-hint">Toca el logo para entrar</p>
+      </div>
+
+      <div class="ra-steps">
+
+        <!-- PASO 1 — el problema -->
+        <div class="ra-step reveal">
+          <p class="eyebrow ra-step__eyebrow">Experimenta la RA — Paso 1</p>
+          <h2 class="ra-step__title">Tu público mira su ciudad todos los días. Y ya no la ve.</h2>
+          <p class="ra-step__text">Vallas, pantallas, volantes: todo compite por un segundo de atención que ya no alcanza para nadie.</p>
+        </div>
+
+        <!-- PASO 2 — el giro -->
+        <div class="ra-step reveal">
+          <p class="eyebrow ra-step__eyebrow">Paso 2</p>
+          <h2 class="ra-step__title">¿Y si su cámara pudiera revelar algo que solo tú pusiste ahí?</h2>
+          <p class="ra-step__text">Con Realidad Aumentada WebAR tu marca aparece flotando sobre el mundo real — sin apps que instalar, sin fricción, solo apuntando el celular.</p>
+        </div>
+
+        <!-- PASO 3 — la invitación -->
+        <div class="ra-step reveal">
+          <p class="eyebrow ra-step__eyebrow">Paso 3</p>
+          <h2 class="ra-step__title">Eso es lo que estás a punto de cruzar.</h2>
+          <p class="ra-step__text">Un portal, un logo, un salón. Así de directo se siente para tu público interactuar con tu marca.</p>
+        </div>
+
+        <!-- PASO 4 — la interacción (puerta → gran salón) -->
+        <div class="ra-step ra-step--portal">
+
+          <!-- ESTADO 1 — LA PUERTA  -->
+          <div class="portal-stage" id="doorStage">
+            <p class="eyebrow">Paso 4 — pruébalo tú mismo</p>
+            <h2 class="portal-stage__title">El portal está en contrucción, pronto estará disponible.</h2>
+
+            <!-- <button class="portal-frame" id="portalFrame" type="button" aria-label="Cruzar el portal hacia el salón Reality Studio">
+              <svg class="portal-frame__arch" viewBox="0 0 220 300" aria-hidden="true">
+                <path class="portal-frame__stone" d="M14 296 V90 C14 34 55 6 110 6 C165 6 206 34 206 90 V296" />
+                <path class="portal-frame__rune" d="M30 296 V92 C30 44 62 22 110 22 C158 22 190 44 190 92 V296" />
+                <circle class="portal-frame__gem" cx="110" cy="34" r="5" />
+                <circle class="portal-frame__gem" cx="42" cy="150" r="3" />
+                <circle class="portal-frame__gem" cx="178" cy="150" r="3" />
+              </svg>
+              <div class="logo-orbit" id="logoOrbit">
+                <div class="logo-3d" id="logo3d" aria-hidden="true">
+                  <span class="logo-3d__face logo-3d__face--edge"></span>
+                  <span class="logo-3d__face logo-3d__face--back">RS</span>
+                  <span class="logo-3d__face">RS</span>
+                </div>
+              </div>
+            </button> -->
+
+            <p class="portal-hint">Toca o haz clic en el portal para entrar</p>
+          </div>
+
+          <!-- ESTADO 2 — EL SALÓN -->
+          <div class="hall-stage" id="hallStage" hidden>
+            <p class="eyebrow">Bienvenido a Reality Studio</p>
+            <h2 class="hall-stage__title">El salón donde tus ideas cobran forma.</h2>
+            <div class="hall-pedestal">
+              <div class="hall-figure-slot" id="figureSlot" aria-hidden="true">
+                <!-- 🔧 EDITA AQUÍ: reemplaza este contenido por tu figura 3D
+                     (por ejemplo un <model-viewer src="tu-figura.glb">). Ver INSTRUCCIONES.md -->
+                <span class="hall-figure-slot__mark">RS</span>
+              </div>
+            </div>
+            <button class="hall-back" id="hallBack" type="button">← Volver a la entrada</button>
+          </div>
+        </div>
+
       </div>
     </section>
 
@@ -250,7 +323,61 @@
       </div>
     </section>
 
-  </div><!-- /.horizontal-scroll -->
+  <!-- ============================================================
+       SALA DE JUEGOS — lobby de mini-juegos que demuestran el
+       servicio de gamificación de marca. Estructura pensada para
+       crecer: cada juego nuevo es solo una tarjeta + una entrada en
+       el registro GAMES de script.js.
+       ============================================================ -->
+  <section class="panel panel--games" id="juegos" aria-label="Sala de juegos interactivos">
+    <div class="container games-section__inner reveal">
+      <p class="eyebrow">Gamificación de marca</p>
+      <h2 class="panel__title">Elige un juego y compruébalo tú mismo.</h2>
+      <p class="panel__text">
+        Diseñamos mini-juegos a la medida para activaciones, ferias y campañas digitales. Esta es nuestra sala de pruebas — juega y así se sentiría tu marca dentro de una.
+      </p>
+
+      <!-- LOBBY: cuadrícula de juegos disponibles -->
+      <div class="game-lobby" id="gameLobby">
+        <button class="game-card" data-game-id="defiende-marca" type="button">
+          <span class="game-card__thumb" aria-hidden="true">RS</span>
+          <span class="game-card__title">Defiende tu marca</span>
+          <span class="game-card__tag">Shooter arcade</span>
+          <span class="game-card__desc">Derriba el spam, los pop-ups y el clickbait antes de que ahoguen tu marca.</span>
+          <span class="game-card__cta">Jugar →</span>
+        </button>
+
+        <div class="game-card game-card--soon" aria-disabled="true">
+          <span class="game-card__thumb game-card__thumb--soon" aria-hidden="true">?</span>
+          <span class="game-card__title">Próximo juego</span>
+          <span class="game-card__tag">Muy pronto</span>
+          <span class="game-card__desc">Cada activación puede tener el suyo. ¿Cuál necesita tu marca?</span>
+        </div>
+      </div>
+
+      <!-- ESCENARIO: aquí se carga el juego elegido -->
+      <div class="arcade-game" id="arcadeGame" hidden>
+        <button class="arcade-game__close" id="arcadeClose" type="button">← Sala de juegos</button>
+        <canvas class="arcade-game__canvas" id="arcadeCanvas" width="640" height="420" role="img" aria-label="Mini-juego arcade Reality Studio"></canvas>
+
+        <div class="arcade-game__overlay" id="arcadeOverlay">
+          <p class="arcade-game__overlay-title" id="arcadeOverlayTitle">Defiende tu marca</p>
+          <p class="arcade-game__overlay-text" id="arcadeOverlayText">Cada bloque es una mala práctica de marketing genérico —spam, banners, pop-ups, clickbait— que le resta atención a tu marca. Muévete con las flechas o desliza, dispara con espacio o el botón, y derríbalos antes de que lleguen a ti.</p>
+          <button class="btn btn--solid arcade-game__play" id="arcadePlay" type="button"><span>Jugar</span></button>
+        </div>
+
+        <div class="arcade-game__hud" aria-hidden="true">
+          <span id="arcadeScore">PUNTAJE: 0 · VIDAS: 3 · OLEADA 1</span>
+        </div>
+
+        <div class="arcade-game__controls" aria-hidden="true">
+          <button class="arcade-game__ctrl" id="arcadeLeft" type="button" aria-label="Mover a la izquierda">◀</button>
+          <button class="arcade-game__ctrl arcade-game__ctrl--shoot" id="arcadeShoot" type="button" aria-label="Disparar">●</button>
+          <button class="arcade-game__ctrl" id="arcadeRight" type="button" aria-label="Mover a la derecha">▶</button>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <!-- ============================================================
        FOOTER
@@ -268,15 +395,25 @@
           <li><a href="#servicios">Servicios</a></li>
           <li><a href="#software">Software</a></li>
           <li><a href="#experiencia-ra">Experiencia RA</a></li>
+          <li><a href="#juegos">Juegos</a></li>
           <li><a href="#contacto">Contacto</a></li>
         </ul>
       </div>
       <div>
         <h4>Contacto</h4>
         <ul>
-          <li><a href="mailto:hola@realitystudio.lat">hola@realitystudio.lat</a></li>
-          <li><a href="https://wa.me/573000000000" target="_blank" rel="noopener">WhatsApp Business</a></li>
+          <li><a href="mailto:contacto@realityst.com">contacto@realityst.com</a></li>
+          <li><a href="https://wa.me/573173020116" target="_blank" rel="noopener">WhatsApp Business</a></li>
           <li>Bogotá, Colombia</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Síguenos</h4>
+        <ul>
+          <!-- 🔧 EDITA AQUÍ: reemplaza por tus URLs reales de redes sociales -->
+          <li><a href="https://www.instagram.com/realitystudiocolombia" target="_blank" rel="noopener">Instagram</a></li>
+          <li><a href="https://www.facebook.com/share/1E1mzdskwq/" target="_blank" rel="noopener">Facebook</a></li>
+          <li><a href="https://www.linkedin.com/company/realitystudio-col/" target="_blank" rel="noopener">LinkedIn</a></li>
         </ul>
       </div>
     </div>
@@ -289,33 +426,39 @@
 </main>
 
 <!-- ============================================================
-     BARRA DE PROGRESO DEL LIENZO HORIZONTAL
+     BARRA DE PROGRESO — avance de lectura vertical de la página
      ============================================================ -->
 <div class="scroll-progress" aria-hidden="true"><div class="scroll-progress__bar" id="scrollProgressBar"></div></div>
 
 <!-- ============================================================
-     CTA FLOTANTE RETRO — WHATSAPP
+     CTA ARCADE — invasor pixel que esquiva corto y lleva a WhatsApp
      ============================================================ -->
-<a
-  href="https://wa.me/573000000000?text=Hola%20Reality%20Studio%2C%20quiero%20cotizar%20un%20proyecto"
-  class="whatsapp-retro"
-  id="whatsappCta"
-  target="_blank"
-  rel="noopener"
-  aria-label="Contactar por WhatsApp">
-  <svg class="whatsapp-retro__icon" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true">
-    <rect x="4" y="1" width="8" height="1" fill="#F9D779"/>
-    <rect x="3" y="2" width="1" height="9" fill="#F9D779"/>
-    <rect x="12" y="2" width="1" height="9" fill="#F9D779"/>
-    <rect x="4" y="1" width="8" height="10" fill="#23CED9"/>
-    <rect x="6" y="4" width="1" height="1" fill="#06211F"/>
-    <rect x="9" y="4" width="1" height="1" fill="#06211F"/>
-    <rect x="5" y="7" width="6" height="1" fill="#06211F"/>
-    <rect x="5" y="11" width="2" height="2" fill="#F9D779"/>
-    <rect x="4" y="13" width="1" height="1" fill="#F9D779"/>
-  </svg>
-  <span>¡Contactar por WhatsApp!</span>
-</a>
+<div class="arcade-cta" id="arcadeCta">
+  <a
+    href="https://wa.me/573173020116?text=Hola%20Reality%20Studio%2C%20quiero%20cotizar%20un%20proyecto"
+    class="arcade-cta__button"
+    id="arcadeCtaButton"
+    target="_blank"
+    rel="noopener"
+    aria-label="Escríbenos ya por WhatsApp Business">
+    <svg class="arcade-cta__sprite" viewBox="0 0 12 12" shape-rendering="crispEdges" aria-hidden="true">
+      <rect x="3" y="0" width="1" height="1" fill="var(--amarillo)"/>
+      <rect x="8" y="0" width="1" height="1" fill="var(--peach)"/>
+      <rect x="3" y="1" width="1" height="1" fill="var(--turquesa)"/>
+      <rect x="8" y="1" width="1" height="1" fill="var(--turquesa)"/>
+      <rect x="2" y="2" width="8" height="6" fill="var(--turquesa)"/>
+      <rect x="4" y="4" width="1" height="2" fill="var(--ink)"/>
+      <rect x="7" y="4" width="1" height="2" fill="var(--ink)"/>
+      <rect x="0" y="5" width="2" height="1" fill="var(--turquesa)"/>
+      <rect x="10" y="5" width="2" height="1" fill="var(--turquesa)"/>
+      <rect x="3" y="8" width="2" height="2" fill="var(--turquesa)"/>
+      <rect x="7" y="8" width="2" height="2" fill="var(--turquesa)"/>
+      <rect x="2" y="10" width="1" height="1" fill="var(--amarillo)"/>
+      <rect x="9" y="10" width="1" height="1" fill="var(--amarillo)"/>
+    </svg>
+    <span class="arcade-cta__label">¡Escríbeme ya!</span>
+  </a>
+</div>
 
 <script src="script.js"></script>
 </body>

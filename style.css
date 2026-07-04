@@ -427,6 +427,92 @@ html{
   gap: 1.4rem;
 }
 
+.panel__inner--wide{ max-width: 1100px; }
+
+/* ---------------- Grid de servicios — Pilar 1: RA Física ---------------- */
+.service-grid{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 1.1rem;
+  margin-top: 0.8rem;
+}
+
+.service-card{
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 1.6rem 1.4rem;
+  background: rgba(6, 33, 31, 0.06);
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius-md);
+  color: var(--ink);
+  transition: transform var(--dur-fast) var(--ease-out-expo), background var(--dur-fast);
+}
+
+.service-card:hover,
+.service-card:focus-within{
+  transform: translateY(-4px);
+  background: rgba(6, 33, 31, 0.1);
+}
+
+.service-card__thumb{
+  width: 44px; height: 44px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ink);
+  color: var(--peach);
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+}
+
+.service-card__title{
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  text-transform: uppercase;
+  line-height: 1.1;
+}
+
+.service-card__desc{
+  font-size: 0.86rem;
+  opacity: 0.85;
+}
+
+.service-card__cta{
+  margin-top: 0.3rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+  border-bottom: 1.5px solid currentColor;
+  padding-bottom: 1px;
+}
+
+.service-card--featured{
+  border-width: 2px;
+  border-style: solid;
+  background: rgba(6, 33, 31, 0.1);
+}
+
+.service-card__badge{
+  position: absolute;
+  top: -0.7rem;
+  right: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: var(--amarillo);
+  color: var(--ink);
+  padding: 0.3em 0.7em;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--ink);
+}
+
 .panel--jade{ background: var(--jade); color: var(--paper); }
 .panel--turquesa{ background: var(--turquesa); color: var(--ink); }
 .panel--coral{ background: var(--peach); color: var(--ink); }
@@ -491,40 +577,37 @@ html{
   color: var(--white);
   overflow: hidden;
   padding: 0;
-  display: block; /* .ra-experience abajo controla el layout real */
+  height: 100svh;
+  min-height: 100svh;
+  position: relative;
 }
 
-/* Patrón "fondo fijo + texto que avanza": .ra-bg y .ra-steps ocupan la
-   MISMA celda de grid (se superponen). .ra-bg queda pegado a la pantalla
-   con position:sticky mientras el usuario recorre los pasos narrativos —
-   sin JS de scroll-jacking, sin pin manual, 100% scroll nativo. */
+/* Vista fija única: .ra-bg (partículas/figuras) y .ra-steps (texto) ocupan
+   todo el panel. Ya NO se apila contenido verticalmente — el usuario nunca
+   ve la página "correrse" al pasar los pasos. El avance de paso lo controla
+   JS (rueda del mouse en desktop, temporizador + tap en móvil — ver
+   initRaStepper() en script.js), que solo alterna opacidad entre
+   .ra-step-frame, nunca la posición de scroll de la página. */
 .ra-experience{
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-}
-
-.ra-bg,
-.ra-steps{
-  grid-column: 1;
-  grid-row: 1;
+  height: 100%;
 }
 
 .ra-bg{
-  position: sticky;
-  top: 0;
-  align-self: start;
-  height: 100svh;
+  position: absolute;
+  inset: 0;
   z-index: 0;
   pointer-events: none;
 }
 
 .ra-steps{
-  position: relative;
+  position: absolute;
+  inset: 0;
   z-index: 2;
 }
 
-.ra-step{
-  min-height: 100svh;
+.ra-step-frame{
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -532,6 +615,14 @@ html{
   text-align: center;
   gap: 1.1rem;
   padding: clamp(3rem, 8vh, 5rem) var(--gutter);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-med) var(--ease-in-out);
+}
+
+.ra-step-frame.is-active{
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .ra-step__eyebrow{ color: var(--menta); }
@@ -548,9 +639,38 @@ html{
   opacity: 0.85;
 }
 
-.ra-step--portal{
-  gap: 2.2rem;
-  pointer-events: auto;
+.ra-step__cta{
+  margin-top: 0.6rem;
+  color: var(--amarillo);
+}
+.ra-step__cta span{ color: var(--ink); }
+
+/* Puntos de progreso — permiten saltar directo a un paso (desktop y móvil) */
+.ra-progress{
+  position: absolute;
+  left: 50%;
+  bottom: clamp(1.5rem, 5vh, 2.5rem);
+  transform: translateX(-50%);
+  z-index: 3;
+  display: flex;
+  gap: 0.6rem;
+}
+
+.ra-progress__dot{
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  border: 1.5px solid var(--menta);
+  background: transparent;
+  padding: 0;
+  opacity: 0.6;
+  transition: opacity var(--dur-fast), background var(--dur-fast), transform var(--dur-fast);
+}
+
+.ra-progress__dot.is-active{
+  background: var(--amarillo);
+  border-color: var(--amarillo);
+  opacity: 1;
+  transform: scale(1.2);
 }
 
 .starfield{
@@ -746,8 +866,91 @@ html{
   background: var(--menta);
 }
 
-/* Tono cálido ambiental cuando se está dentro del salón */
-.panel--space.is-hall::after{
+.hall-stage__actions{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.hall-cta-whatsapp{ color: var(--amarillo); }
+.hall-cta-whatsapp span{ color: var(--ink); }
+
+/* ---------------------------------------------------------------------
+   7.5 MODAL DEL PORTAL — puerta → salón, disparado por "Probar RA"
+   Reutiliza los mismos componentes visuales (portal-frame, hall-stage,
+   logo-3d, partículas doradas) ya definidos arriba, solo dentro de un
+   overlay de pantalla completa con su propio lienzo WebGL.
+   --------------------------------------------------------------------- */
+.portal-modal{
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.portal-modal[hidden]{ display: none; }
+
+.portal-modal__backdrop{
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 10, 16, 0.9);
+  backdrop-filter: blur(6px);
+}
+
+.portal-modal__panel{
+  position: relative;
+  z-index: 1;
+  width: min(94vw, 720px);
+  height: min(90svh, 780px);
+  background: var(--space-deep);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255,255,255,0.12);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.portal-modal__bg{
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.portal-modal__close{
+  position: absolute;
+  top: 0.9rem;
+  right: 0.9rem;
+  z-index: 3;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.3);
+  background: rgba(5,10,16,0.6);
+  color: var(--white);
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.portal-modal__close:hover,
+.portal-modal__close:focus-visible{
+  border-color: var(--amarillo);
+  color: var(--amarillo);
+}
+
+.portal-modal .portal-stage,
+.portal-modal .hall-stage{
+  position: relative;
+  z-index: 2;
+  padding: 2rem 1.5rem;
+}
+
+/* Tono cálido ambiental cuando se está dentro del salón (ahora en el modal) */
+.portal-modal__panel.is-hall::after{
   content: '';
   position: absolute;
   inset: 0;
@@ -860,6 +1063,12 @@ html{
   left: 44%;
   border-radius: 0;
   opacity: 0.9;
+}
+
+#probarRaBtn{
+  color: rgb(0, 223, 0);
+  background-color: #503b00;
+
 }
 
 /* ---------------------------------------------------------------------
@@ -1309,7 +1518,14 @@ html{
   z-index: 1;
   display: none;
   justify-content: center;
+  align-items: center;
   gap: 1rem;
+  padding-inline: 1rem;
+}
+
+.arcade-game__controls-move{
+  display: flex;
+  gap: 0.8rem;
 }
 
 .arcade-game__ctrl{
@@ -1327,7 +1543,70 @@ html{
 }
 
 @media (hover: none){
-  .arcade-game__controls{ display: flex; }
+  .arcade-game__controls{ display: flex; justify-content: space-between; }
+}
+
+/* Aviso de rotación — solo aparece en móvil/portrait al intentar jugar */
+.arcade-game__rotate{
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+  background: rgba(5, 10, 16, 0.94);
+}
+
+.arcade-game__rotate[hidden]{ display: none; }
+
+.arcade-game__rotate-text{
+  font-family: var(--font-display);
+  font-size: clamp(1.2rem, 5vw, 1.7rem);
+  color: var(--white);
+  text-transform: uppercase;
+  animation: rotate-hint-bounce 1.6s ease-in-out infinite;
+}
+
+@keyframes rotate-hint-bounce{
+  0%, 100%{ transform: rotate(0deg); }
+  50%{ transform: rotate(-8deg); }
+}
+
+/* Modo pantalla completa (móvil, landscape forzado): el juego ocupa toda
+   la pantalla y los controles se reposicionan a las esquinas — mover a
+   la izquierda, disparar a la derecha, siguiendo el patrón estándar de
+   shooters móviles para minimizar error de dedo tapando la acción. */
+.arcade-game:fullscreen,
+.arcade-game:-webkit-full-screen{
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  aspect-ratio: auto;
+  border-radius: 0;
+  border: none;
+}
+
+.arcade-game:fullscreen .arcade-game__canvas,
+.arcade-game:-webkit-full-screen .arcade-game__canvas{
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.arcade-game:fullscreen .arcade-game__controls,
+.arcade-game:-webkit-full-screen .arcade-game__controls{
+  display: flex;
+  justify-content: space-between;
+  bottom: 1.2rem;
+  padding-inline: 1.6rem;
+}
+
+.arcade-game:fullscreen .arcade-game__ctrl,
+.arcade-game:-webkit-full-screen .arcade-game__ctrl{
+  width: 64px; height: 64px;
+  font-size: 1.4rem;
 }
 
 /* ---------------------------------------------------------------------

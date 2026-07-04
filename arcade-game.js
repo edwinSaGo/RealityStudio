@@ -22,8 +22,10 @@ const ENEMY_LABELS = ['SPAM', 'BANNER', 'POP-UP', 'CLICKBAIT', 'ADS FALSA', 'COP
  * @param {HTMLCanvasElement} opts.canvas
  * @param {(score:number, lives:number, wave:number)=>void} opts.onScoreChange
  * @param {(finalScore:number, won:boolean)=>void} opts.onGameOver
+ * @param {()=>void} [opts.onShoot] - hook opcional de audio, llamado al disparar
+ * @param {()=>void} [opts.onHit] - hook opcional de audio, llamado al impactar (enemigo o jugador)
  */
-export function createArcadeGame({ canvas, onScoreChange, onGameOver }) {
+export function createArcadeGame({ canvas, onScoreChange, onGameOver, onShoot, onHit }) {
   const ctx = canvas.getContext('2d');
 
   const player = { x: WIDTH / 2 - 26, y: HEIGHT - 34, w: 52, h: 16, speed: 320 };
@@ -86,6 +88,7 @@ export function createArcadeGame({ canvas, onScoreChange, onGameOver }) {
     if (!running || shootCooldown > 0) return;
     bullets.push({ x: player.x + player.w / 2 - 2, y: player.y - 10, w: 4, h: 12 });
     shootCooldown = 0.28;
+    if (onShoot) onShoot();
   }
 
   function aabbHit(a, b) {
@@ -147,6 +150,7 @@ export function createArcadeGame({ canvas, onScoreChange, onGameOver }) {
           b.hit = true;
           score += 10;
           if (onScoreChange) onScoreChange(score, lives, wave);
+          if (onHit) onHit();
         }
       });
     });
@@ -158,6 +162,7 @@ export function createArcadeGame({ canvas, onScoreChange, onGameOver }) {
         b.hit = true;
         lives -= 1;
         if (onScoreChange) onScoreChange(score, lives, wave);
+        if (onHit) onHit();
         if (lives <= 0) endGame(false);
       }
     });

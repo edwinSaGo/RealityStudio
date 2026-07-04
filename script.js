@@ -14,6 +14,18 @@
     whatsappNumber: '573173020116',
     whatsappMessage: 'Hola Reality Studio, quiero cotizar un proyecto',
 
+    // Mensaje del botón de WhatsApp dentro del salón del portal (RA)
+    whatsappHallMessage: 'Hola Reality Studio, quiero cotizar esta experiencia de RA',
+
+    // 🔧 AUDIO — pega aquí las rutas cuando tengas los archivos reales.
+    // Mientras estén en null, el juego funciona igual mudo (sin errores).
+    audio: {
+      shoot: null,   // ej. 'audio/shoot.mp3'
+      hit: null,     // ej. 'audio/hit.mp3'
+      gameOver: null,
+      music: null,
+    },
+
     // Endpoint del formulario de leads. Ejemplos válidos:
     //  - Formspree:  'https://formspree.io/f/TU_ID'
     //  - Webhook propio / Google Apps Script / Zapier, etc.
@@ -33,6 +45,22 @@
     // Cantidad de estrellas en el fondo de la sección "Experimenta la RA"
     starCount: 90,
   };
+
+  /* -------------------------------------------------------------------
+     0.5 AUDIO — reproduce efectos si CONFIG.audio tiene una ruta real;
+     si está en null, no hace nada (sin errores, sin romper el juego).
+     ------------------------------------------------------------------- */
+  const audioCache = {};
+  function playSfx(name) {
+    const src = CONFIG.audio && CONFIG.audio[name];
+    if (!src) return;
+    try {
+      if (!audioCache[name]) audioCache[name] = new Audio(src);
+      const node = audioCache[name].cloneNode();
+      node.volume = 0.6;
+      node.play().catch(() => { /* autoplay bloqueado, silencioso */ });
+    } catch (_) { /* silencioso */ }
+  }
 
   /* -------------------------------------------------------------------
      1. PRELOADER DISRUPTIVO
@@ -215,9 +243,9 @@
   /* -------------------------------------------------------------------
      6. LOGO 3D + PARTÍCULAS DE ORO — órbitas elípticas reactivas
      ------------------------------------------------------------------- */
-  function initGoldOrbit() {
-    const orbit = document.getElementById('logoOrbit');
-    const logo = document.getElementById('logo3d');
+  function initGoldOrbit(orbitId = 'logoOrbit', logoId = 'logo3d') {
+    const orbit = document.getElementById(orbitId);
+    const logo = document.getElementById(logoId);
     if (!orbit || !logo) return null;
 
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -285,7 +313,7 @@
       window.requestAnimationFrame(animate);
     }
 
-    // initPortalHall() usa esto para congelar la órbita y encoger el logo
+    // initPortalModal() usa esto para congelar la órbita y encoger el logo
     // en el momento exacto en que el usuario cruza hacia el salón.
     return {
       setPortalActive(active) {
@@ -322,29 +350,11 @@
 
     let scene = null;
     let loadStarted = false;
-    let ticking = false;
 
-    // El progreso de la escena 3D ahora se calcula siempre a partir del
-    // scroll vertical (antes había una rama separada para desktop basada en
-    // scroll horizontal — ya no existe ese eje, así que un solo cálculo
-    // sirve para todos los tamaños de pantalla).
-    function computeProgress() {
-      if (!scene) return;
-      const rect = section.getBoundingClientRect();
-      const vh = window.innerHeight || document.documentElement.clientHeight;
-      const progress = (vh - rect.top) / (vh + rect.height);
-      scene.setProgress(Math.min(Math.max(progress, 0), 1));
-    }
-
-    function onScrollOrResize() {
-      if (ticking) return;
-      ticking = true;
-      window.requestAnimationFrame(() => {
-        computeProgress();
-        ticking = false;
-      });
-    }
-
+    // La sección ahora es una vista fija (100svh): el progreso de la cámara
+    // y las partículas ya NO se calcula desde el scroll de la página, sino
+    // que lo empuja initRaStepper() cada vez que cambia el paso activo,
+    // usando la referencia a `scene` que este callback entrega más abajo.
     function loadScene() {
       if (loadStarted) return;
       loadStarted = true;
@@ -352,20 +362,8 @@
         .then(({ createPortalScene }) => {
           scene = createPortalScene({ canvas, isMobile: !isDesktop() });
           section.classList.add('is-webgl-active');
-          computeProgress();
 
-          window.addEventListener('scroll', onScrollOrResize, { passive: true });
-          window.addEventListener('resize', onScrollOrResize);
-
-          const orbit = document.getElementById('logoOrbit');
-          if (orbit) {
-            orbit.addEventListener('pointermove', (event) => {
-              const rect = orbit.getBoundingClientRect();
-              const x = ((event.clientX - rect.left) / rect.width - 0.5) * 2;
-              const y = ((event.clientY - rect.top) / rect.height - 0.5) * 2;
-              scene.setPointer(x, y);
-            });
-          }
+          window.addEventListener('resize', () => scene.resize());
 
           let isSectionVisible = false;
           const visibilityObserver = new IntersectionObserver((entries) => {
@@ -403,23 +401,39 @@
   }
 
   /* -------------------------------------------------------------------
-     6.6. SALÓN DEL PORTAL — puerta → gran salón con transición narrativa
+     6.6. MODAL DEL PORTAL — puerta → gran salón, abierto desde "Probar RA"
+     Reutiliza el mismo mecanismo que antes vivía inline en la sección
+     (puerta con arco SVG + logo 3D + partículas doradas → salón con
+     pedestal). Ahora vive en un modal propio con su propia escena WebGL,
+     así no compite por el mismo canvas que el fondo de la sección.
      ------------------------------------------------------------------- */
-  function initPortalHall(goldOrbit) {
-    const section = document.getElementById('experiencia-ra');
-    const frame = document.getElementById('portalFrame');
-    const doorStage = document.getElementById('doorStage');
-    const hallStage = document.getElementById('hallStage');
-    const backBtn = document.getElementById('hallBack');
-    const loader = document.getElementById('portalLoader');
-    const loaderWord = document.getElementById('portalLoaderWord');
-    if (!section || !frame || !doorStage || !hallStage) return null;
+  function initPortalModal() {
+    const trigger = document.getElementById('probarRaBtn');
+    const modal = document.getElementById('portalModal');
+    const closeBtn = document.getElementById('portalModalClose');
+    const frame = document.getElementById('modalPortalFrame');
+    const doorStage = document.getElementById('modalDoorStage');
+    const hallStage = document.getElementById('modalHallStage');
+    const backBtn = document.getElementById('modalHallBack');
+    const loader = document.getElementById('modalPortalLoader');
+    const loaderWord = document.getElementById('modalPortalLoaderWord');
+    const canvas = document.getElementById('modalPortalCanvas');
+    const hallWhatsapp = document.getElementById('modalHallWhatsapp');
+    if (!trigger || !modal || !frame || !doorStage || !hallStage) return;
 
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const HALL_WORDS = ['ABRIENDO', 'CRUZANDO_UMBRAL', 'CORE_LOAD_TRUE', 'RENDER::SALON', '0x52534F', 'BIENVENIDO'];
 
-    let state = 'door'; // 'door' | 'transitioning' | 'hall'
-    let hallScene = null;
+    // Enlace de WhatsApp del salón, armado desde CONFIG (mismo patrón del CTA arcade)
+    if (hallWhatsapp) {
+      const text = encodeURIComponent(CONFIG.whatsappHallMessage);
+      hallWhatsapp.setAttribute('href', `https://wa.me/${CONFIG.whatsappNumber}?text=${text}`);
+    }
+
+    let state = 'closed'; // 'closed' | 'door' | 'transitioning' | 'hall'
+    let scene = null;
+    let goldOrbit = null;
+    let sceneLoadStarted = false;
 
     function runLoader(durationMs, callback) {
       if (!loader || !loaderWord || prefersReducedMotion) {
@@ -439,6 +453,42 @@
       }, durationMs);
     }
 
+    function ensureScene() {
+      if (sceneLoadStarted) return;
+      sceneLoadStarted = true;
+
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const supportsWebGL = (() => {
+        try {
+          const probe = document.createElement('canvas');
+          return !!(window.WebGLRenderingContext &&
+            (probe.getContext('webgl') || probe.getContext('experimental-webgl')));
+        } catch (_) {
+          return false;
+        }
+      })();
+
+      if (!prefersReducedMotion && supportsWebGL) {
+        import('./three-portal.js')
+          .then(({ createPortalScene }) => {
+            const isDesktop = window.matchMedia('(min-width: 769px)').matches;
+            scene = createPortalScene({ canvas, isMobile: !isDesktop });
+            // Vista fija dentro del modal: sin scroll-scrub, solo el
+            // movimiento ambiental propio de estrellas/figuras (idle).
+            scene.setProgress(0);
+            scene.setActive(true);
+            canvas.style.opacity = '1'; // el modal no depende de .is-webgl-active
+          })
+          .catch((err) => {
+            console.warn('[Reality Studio] No se pudo cargar la escena 3D del modal:', err);
+          });
+      }
+      // Si no hay WebGL o el usuario prefiere menos movimiento, el modal
+      // se queda con el fondo oscuro sólido — sigue siendo funcional,
+      // solo sin partículas.
+      if (!goldOrbit) goldOrbit = initGoldOrbit('modalLogoOrbit', 'modalLogo3d');
+    }
+
     function enterHall() {
       if (state !== 'door') return;
       state = 'transitioning';
@@ -451,51 +501,186 @@
       runLoader(prefersReducedMotion ? 150 : 1100, () => {
         doorStage.hidden = true;
         hallStage.hidden = false;
-        section.classList.add('is-hall');
+        modal.querySelector('.portal-modal__panel').classList.add('is-hall');
         state = 'hall';
-        if (hallScene) hallScene.setHallMode(true);
+        if (scene) scene.setHallMode(true);
         if (backBtn) backBtn.focus();
       });
     }
 
-    function exitHall() {
-      if (state !== 'hall') return;
+    function resetToDoor() {
       state = 'door';
       hallStage.hidden = true;
       doorStage.hidden = false;
-      section.classList.remove('is-hall');
-      if (hallScene) hallScene.setHallMode(false);
+      modal.querySelector('.portal-modal__panel').classList.remove('is-hall');
+      if (scene) scene.setHallMode(false);
       if (goldOrbit) goldOrbit.setPortalActive(false);
-      frame.focus();
     }
 
-    // Clic o tap (y activación por teclado, nativa de <button>): funciona
-    // igual en PC y en celular. Ya NO interceptamos la rueda del mouse aquí:
-    // antes "cruzar con scroll" competía con el scroll normal de la página
-    // y era una de las causas de que el usuario quedara atrapado.
+    function openModal() {
+      modal.hidden = false;
+      document.body.classList.add('is-locked');
+      state = 'door';
+      ensureScene();
+      closeBtn.focus();
+      document.addEventListener('keydown', onKeydown);
+    }
+
+    function closeModal() {
+      modal.hidden = true;
+      document.body.classList.remove('is-locked');
+      if (scene) { scene.setActive(false); scene.destroy(); scene = null; }
+      sceneLoadStarted = false;
+      resetToDoor();
+      state = 'closed';
+      document.removeEventListener('keydown', onKeydown);
+      trigger.focus();
+    }
+
+    function onKeydown(event) {
+      if (event.key === 'Escape') closeModal();
+    }
+
+    trigger.addEventListener('click', openModal);
+    closeBtn.addEventListener('click', closeModal);
     frame.addEventListener('click', enterHall);
+    if (backBtn) backBtn.addEventListener('click', resetToDoor);
 
-    if (backBtn) backBtn.addEventListener('click', exitHall);
-
-    // El remolino de partículas doradas necesita su propio seguimiento de
-    // puntero: #logoOrbit (usado para el paralaje en la puerta) queda oculto
-    // una vez dentro del salón y deja de recibir eventos de puntero.
-    section.addEventListener('pointermove', (event) => {
-      if (!hallScene || state !== 'hall') return;
-      const rect = section.getBoundingClientRect();
+    modal.addEventListener('pointermove', (event) => {
+      if (!scene || state !== 'hall') return;
+      const rect = modal.getBoundingClientRect();
       const x = ((event.clientX - rect.left) / rect.width - 0.5) * 2;
       const y = ((event.clientY - rect.top) / rect.height - 0.5) * 2;
-      hallScene.setPointer(x, y);
+      scene.setPointer(x, y);
     });
-
-    return {
-      connectScene(scene) {
-        hallScene = scene;
-        if (state === 'hall') hallScene.setHallMode(true);
-      },
-    };
   }
 
+
+  /* -------------------------------------------------------------------
+     6.7. STEPPER "EXPERIMENTA LA RA" — vista fija, pasos por fundido
+     Desktop: la rueda del mouse controla el paso. Al llegar a los bordes
+     (paso 0 hacia atrás, paso 3 hacia adelante) se libera el scroll nativo
+     de la página — mismo patrón de edge-detection ya validado en el bug
+     de scroll horizontal/vertical, ahora aplicado a un eje de "pasos".
+     Móvil (sin rueda): avance automático por tiempo, tap para saltar,
+     long-press para pausar. En ambos casos, el fondo WebGL (partículas y
+     figuras) NUNCA deja de animarse — solo recibe un progreso distinto.
+     ------------------------------------------------------------------- */
+  function initRaStepper(onStepChange) {
+    const section = document.getElementById('experiencia-ra');
+    const frames = Array.from(document.querySelectorAll('.ra-step-frame'));
+    const dots = Array.from(document.querySelectorAll('.ra-progress__dot'));
+    if (!section || !frames.length) return;
+
+    const TOTAL = frames.length; // 4
+    const isTouch = window.matchMedia('(hover: none), (pointer: coarse)').matches;
+    const AUTO_ADVANCE_MS = 4500;
+
+    let current = 0;
+    let sectionEngaged = false; // true cuando la sección ocupa la mayor parte del viewport
+    let autoTimer = null;
+    let autoPaused = false;
+
+    function render() {
+      frames.forEach((frame, i) => frame.classList.toggle('is-active', i === current));
+      dots.forEach((dot, i) => dot.classList.toggle('is-active', i === current));
+      if (typeof onStepChange === 'function') onStepChange(current, TOTAL);
+    }
+
+    function goToStep(next) {
+      current = Math.max(0, Math.min(TOTAL - 1, next));
+      render();
+    }
+
+    // ---------------- Desktop: rueda del mouse ----------------
+    let wheelCooldown = false;
+    function onWheel(event) {
+      if (!sectionEngaged) return;
+
+      const goingForward = event.deltaY > 0;
+
+      // Bordes: libera el scroll nativo hacia la sección siguiente/anterior
+      // en vez de atraparlo — el mismo principio que evitó el bug anterior
+      // de scroll horizontal/vertical simultáneo.
+      if (goingForward && current === TOTAL - 1) return;
+      if (!goingForward && current === 0) return;
+
+      event.preventDefault();
+      if (wheelCooldown) return;
+      wheelCooldown = true;
+      window.setTimeout(() => { wheelCooldown = false; }, 650);
+
+      goToStep(current + (goingForward ? 1 : -1));
+    }
+
+    if (!isTouch) {
+      section.addEventListener('wheel', onWheel, { passive: false });
+    }
+
+    // ---------------- Móvil: auto-avance + tap para saltar ----------------
+    function stopAutoAdvance() {
+      if (autoTimer) window.clearTimeout(autoTimer);
+      autoTimer = null;
+    }
+
+    function scheduleAutoAdvance() {
+      stopAutoAdvance();
+      if (!isTouch || !sectionEngaged || autoPaused) return;
+      if (current >= TOTAL - 1) return; // el último paso espera la acción del usuario
+      autoTimer = window.setTimeout(() => {
+        goToStep(current + 1);
+        scheduleAutoAdvance();
+      }, AUTO_ADVANCE_MS);
+    }
+
+    if (isTouch) {
+      const LONG_PRESS_MS = 350;
+      let pointerDownAt = 0;
+
+      section.addEventListener('pointerdown', () => {
+        pointerDownAt = Date.now();
+        autoPaused = true; // pausa el avance automático mientras el dedo esté abajo
+      });
+      section.addEventListener('pointerup', (event) => {
+        const heldMs = Date.now() - pointerDownAt;
+        autoPaused = false;
+        const isShortTap = heldMs < LONG_PRESS_MS;
+        const hitsInteractive = event.target.closest('.ra-progress, .ra-step__cta');
+        // Tap corto en zona no interactiva: avanza inmediato. Long-press:
+        // solo pausó y reanuda el timer sin saltar de paso.
+        if (isShortTap && !hitsInteractive) {
+          goToStep(Math.min(current + 1, TOTAL - 1));
+        }
+        scheduleAutoAdvance();
+      });
+      section.addEventListener('pointercancel', () => { autoPaused = false; });
+    }
+
+    // ---------------- Puntos de progreso: saltar directo a un paso ----------------
+    dots.forEach((dot) => {
+      dot.addEventListener('click', () => {
+        stopAutoAdvance();
+        goToStep(parseInt(dot.dataset.step, 10));
+        scheduleAutoAdvance();
+      });
+    });
+
+    // ---------------- Visibilidad: solo "engancha" la rueda / corre el timer
+    // cuando la sección ocupa la mayor parte del viewport ----------------
+    const engagementObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        sectionEngaged = entry.intersectionRatio > 0.6;
+        if (sectionEngaged) {
+          scheduleAutoAdvance();
+        } else {
+          stopAutoAdvance();
+        }
+      });
+    }, { threshold: [0, 0.6, 1] });
+    engagementObserver.observe(section);
+
+    render();
+  }
 
   /* -------------------------------------------------------------------
      7. FORMULARIO B2B — validación + envío (con o sin backend)
@@ -642,6 +827,7 @@
     const leftBtn = document.getElementById('arcadeLeft');
     const rightBtn = document.getElementById('arcadeRight');
     const shootBtn = document.getElementById('arcadeShoot');
+    const rotateEl = document.getElementById('arcadeRotate');
     if (!section || !lobby || !stage || !canvas || !overlay || !playBtn) return;
 
     const defaultOverlayText = overlayText.textContent;
@@ -649,11 +835,16 @@
     let game = null;
     let controlsBound = false;
 
+    const isTouch = window.matchMedia('(hover: none), (pointer: coarse)').matches;
+    const isLandscape = () => window.matchMedia('(orientation: landscape)').matches;
+    let waitingForRotation = false;
+
     function onScoreChange(score, lives, wave) {
       if (scoreEl) scoreEl.textContent = `PUNTAJE: ${score} · VIDAS: ${lives} · OLEADA ${wave}`;
     }
 
     function onGameOver(finalScore, won) {
+      playSfx('gameOver');
       overlay.hidden = false;
       overlayTitle.textContent = won ? '¡Los venciste a todos!' : 'Fin del juego';
       overlayText.textContent =
@@ -662,14 +853,72 @@
       playBtn.querySelector('span').textContent = 'Jugar de nuevo';
     }
 
+    // ---------------- Pantalla completa horizontal (solo móvil/touch) ----------------
+    function beginPlay() {
+      waitingForRotation = false;
+      if (rotateEl) rotateEl.hidden = true;
+      overlay.hidden = true;
+      if (game) game.start();
+    }
+
+    function requestGameFullscreen() {
+      const requestFs = stage.requestFullscreen || stage.webkitRequestFullscreen;
+      if (requestFs) {
+        try { requestFs.call(stage).catch(() => {}); } catch (_) { /* silencioso */ }
+      }
+      // screen.orientation.lock solo funciona en algunos navegadores (y
+      // generalmente requiere estar ya en fullscreen). Si falla, no pasa
+      // nada: igual detectamos el giro real del teléfono más abajo.
+      if (window.screen && window.screen.orientation && window.screen.orientation.lock) {
+        window.screen.orientation.lock('landscape').catch(() => { /* no soportado */ });
+      }
+    }
+
+    function onRotationCheck() {
+      if (!waitingForRotation) return;
+      if (isLandscape()) {
+        window.removeEventListener('resize', onRotationCheck);
+        window.removeEventListener('orientationchange', onRotationCheck);
+        requestGameFullscreen();
+        beginPlay();
+      }
+    }
+
+    function startPlayFlow() {
+      if (!isTouch) {
+        beginPlay();
+        return;
+      }
+      if (isLandscape()) {
+        requestGameFullscreen();
+        beginPlay();
+        return;
+      }
+      // Portrait en móvil: pedimos girar el teléfono antes de arrancar
+      overlay.hidden = true;
+      waitingForRotation = true;
+      if (rotateEl) rotateEl.hidden = false;
+      window.addEventListener('resize', onRotationCheck);
+      window.addEventListener('orientationchange', onRotationCheck);
+    }
+
+    // Si el usuario sale de pantalla completa (botón atrás del sistema,
+    // gesto, etc.) nunca lo dejamos "atrapado": cerramos el juego con
+    // normalidad y lo regresamos al lobby.
+    function onFullscreenChange() {
+      const stillFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
+      if (!stillFullscreen && !stage.hidden && game) {
+        closeGame();
+      }
+    }
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+
     function bindControlsOnce() {
       if (controlsBound) return;
       controlsBound = true;
 
-      playBtn.addEventListener('click', () => {
-        overlay.hidden = true;
-        if (game) game.start();
-      });
+      playBtn.addEventListener('click', startPlayFlow);
 
       window.addEventListener('keydown', (event) => {
         if (!game || stage.hidden) return;
@@ -706,6 +955,19 @@
       overlay.hidden = false;
       overlayText.textContent = defaultOverlayText;
       playBtn.querySelector('span').textContent = 'Jugar';
+      if (rotateEl) rotateEl.hidden = true;
+      waitingForRotation = false;
+      window.removeEventListener('resize', onRotationCheck);
+      window.removeEventListener('orientationchange', onRotationCheck);
+      // Nunca dejamos al usuario atrapado en pantalla completa u
+      // orientación forzada al salir del juego.
+      if (document.fullscreenElement || document.webkitFullscreenElement) {
+        const exitFs = document.exitFullscreen || document.webkitExitFullscreen;
+        if (exitFs) { try { exitFs.call(document).catch(() => {}); } catch (_) { /* silencioso */ } }
+      }
+      if (window.screen && window.screen.orientation && window.screen.orientation.unlock) {
+        try { window.screen.orientation.unlock(); } catch (_) { /* silencioso */ }
+      }
     }
 
     async function openGame(gameId) {
@@ -727,7 +989,13 @@
           loadedGames[gameId] = createGame;
         }
         if (game) game.stop();
-        game = loadedGames[gameId]({ canvas, onScoreChange, onGameOver });
+        game = loadedGames[gameId]({
+          canvas,
+          onScoreChange,
+          onGameOver,
+          onShoot: () => playSfx('shoot'),
+          onHit: () => playSfx('hit'),
+        });
       } catch (err) {
         console.warn(`[Reality Studio] No se pudo cargar el juego "${gameId}":`, err);
         overlayText.textContent = 'El juego no pudo cargar en este momento. Escríbenos igual, hablemos de tu proyecto.';
@@ -785,11 +1053,17 @@
     initScrollProgress();
     initReveals();
     initStarfield();
-    const goldOrbit = initGoldOrbit();
-    const hallApi = initPortalHall(goldOrbit);
-    initPortalScene((scene) => {
-      if (hallApi) hallApi.connectScene(scene);
+
+    // El fondo WebGL (partículas/figuras) recibe su progreso desde el paso
+    // narrativo activo, no desde el scroll — así nunca deja de animarse
+    // mientras el texto se funde entre pasos.
+    let raScene = null;
+    initPortalScene((scene) => { raScene = scene; });
+    initRaStepper((step, total) => {
+      if (raScene) raScene.setProgress(step / (total - 1));
     });
+
+    initPortalModal();
     initLeadForm();
     initArcadeCta();
     initGameLobby();

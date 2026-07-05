@@ -1239,6 +1239,14 @@ html{
   border-color: var(--amarillo);
 }
 
+/* Oculto mientras se juega (ver script.js → initGameLobby → hideGlobalCta),
+   mismo patrón que el CTA de WhatsApp: vista plena del juego. */
+.sound-toggle.is-hidden-ingame{
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
 /* ---------------------------------------------------------------------
    10.5 SALA DE JUEGOS — lobby de mini-juegos de marca
    --------------------------------------------------------------------- */
@@ -1600,11 +1608,39 @@ html{
 @media (max-width: 768px){
   .nav__links a:not(.nav__cta){ display: none; }
   .nav__menu-btn{ display: none; } /* enlaces reducidos a solo CTA en móvil, sin menú extra */
+  .nav__brand-mark{ display: none; } /* nav apiñado en móvil: solo queda el texto + "Hablemos" */
 
   .panel{ padding-block: clamp(4.5rem, 14vh, 6rem); }
 
   .site-footer__top{ grid-template-columns: 1fr; gap: 2rem; }
   .form-layout{ gap: 2.5rem; }
+
+  /* Hero: mismas fuentes, tamaños contenidos para que ningún texto se
+     salga de la pantalla en celulares angostos. */
+  .hero__title{ font-size: clamp(2.1rem, 11vw, 3.4rem); }
+  .hero__subtitle{ font-size: clamp(0.92rem, 4vw, 1.05rem); }
+
+  /* Modal 3D: el modelo sube ~50px respecto al centro para dejar más
+     aire debajo del título en pantallas móviles. */
+  .showcase3d-model{ transform: translateY(-50px); }
+
+  /* Sala de juegos: en móvil el recuadro basado en aspect-ratio 640:420
+     quedaba demasiado bajo (antes de entrar a pantalla completa) y el
+     texto de instrucciones + botón "Jugar" se cortaban. Se amplía la
+     altura y se agrega scroll de seguridad dentro del overlay. */
+  .arcade-game{
+    aspect-ratio: auto;
+    min-height: min(78vh, 560px);
+  }
+  .arcade-game__overlay,
+  .arcade-game__permission-denied{
+    overflow-y: auto;
+    padding: 1.2rem 1.3rem;
+    gap: 0.85rem;
+  }
+  .arcade-game__overlay-text{
+    font-size: 0.88rem;
+  }
 }
 
 @media (max-width: 480px){

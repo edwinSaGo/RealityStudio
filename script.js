@@ -787,6 +787,7 @@
     const permissionDeniedEl = document.getElementById('arcadePermissionDenied');
     const permissionRetryBtn = document.getElementById('arcadePermissionRetry');
     const globalCta = document.getElementById('arcadeCta');
+    const soundToggleBtn = document.getElementById('soundToggle');
     if (!section || !lobby || !stage || !canvas || !overlay || !playBtn) return;
 
     const defaultOverlayText = overlayText.textContent;
@@ -806,14 +807,17 @@
       if (scoreEl) scoreEl.textContent = `PUNTAJE: ${score} · VIDAS: ${lives} · OLEADA ${wave}`;
     }
 
-    // El CTA flotante de WhatsApp del sitio se oculta mientras se juega
-    // (no debe competir con la vista del juego) y solo reaparece al
-    // terminar la partida (victoria o derrota) o al salir del juego.
+    // El CTA flotante de WhatsApp y el botón de sonido se ocultan mientras
+    // se juega (vista plena del juego, sin nada compitiendo visualmente) y
+    // solo reaparecen al terminar la partida (victoria o derrota) o al
+    // salir del juego.
     function hideGlobalCta() {
       if (globalCta) globalCta.classList.add('is-hidden-ingame');
+      if (soundToggleBtn) soundToggleBtn.classList.add('is-hidden-ingame');
     }
     function showGlobalCta() {
       if (globalCta) globalCta.classList.remove('is-hidden-ingame');
+      if (soundToggleBtn) soundToggleBtn.classList.remove('is-hidden-ingame');
     }
 
     function onGameOver(finalScore, won) {
@@ -832,19 +836,28 @@
     // iOS 13+ exige permiso explícito, solicitado en el mismo toque de
     // "Jugar" para no sentirse como un paso adicional. Si el navegador no
     // requiere permiso (Android, la mayoría), se activa directo.
-    const TILT_SENSITIVITY = 26; // grados de inclinación para velocidad máxima
+    // Calibración "arcade": inclinaciones pequeñas ya alcanzan buena
+    // velocidad (TILT_SENSITIVITY bajo) + curva no lineal (TILT_CURVE)
+    // para que la respuesta se sienta inmediata sin perder control fino
+    // cerca del centro.
+    const TILT_SENSITIVITY = 16; // grados de inclinación para velocidad máxima
+    const TILT_CURVE = 0.6;      // <1 = respuesta más agresiva desde el centro
 
     function handleTilt(event) {
       if (!game) return;
       const angle = (window.screen && window.screen.orientation && window.screen.orientation.angle)
         ?? window.orientation ?? 0;
       let raw;
-      if (angle === 90) raw = -event.beta;
-      else if (angle === -90 || angle === 270) raw = event.beta;
+      // Ejes de deviceorientation según la rotación real de la pantalla —
+      // corregido: los signos anteriores dejaban el movimiento invertido
+      // (inclinar a la derecha movía la nave a la izquierda y viceversa).
+      if (angle === 90) raw = event.beta;
+      else if (angle === -90 || angle === 270) raw = -event.beta;
       else raw = event.gamma;
       if (raw == null) return;
-      const value = Math.max(-1, Math.min(1, raw / TILT_SENSITIVITY));
-      game.setMove(value);
+      const normalized = Math.max(-1, Math.min(1, raw / TILT_SENSITIVITY));
+      const curved = Math.sign(normalized) * Math.pow(Math.abs(normalized), TILT_CURVE);
+      game.setMove(curved);
     }
 
     function startTiltListener() {

@@ -30,7 +30,7 @@
     //  - Formspree:  'https://formspree.io/f/TU_ID'
     //  - Webhook propio / Google Apps Script / Zapier, etc.
     // Déjalo en null para simular el envío sin backend (modo demo).
-    formEndpoint: null,
+    formEndpoint: 'https://script.google.com/macros/s/AKfycbyV48Piw1Lsq5IE4TvUzMkNNLGk-cnhVwpw7-SUzJsTrSDwMocsANL9KllqkD5jhjlO/exec',
 
     // IDs de medición — actívalos cuando los tengas (ver INSTRUCCIONES.md)
     ga4Id: null,        // 'G-XXXXXXXXXX'

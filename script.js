@@ -14,16 +14,21 @@
     whatsappNumber: '573173020116',
     whatsappMessage: 'Hola Reality Studio, quiero cotizar un proyecto',
 
-    // Mensaje del botón de WhatsApp dentro del salón del portal (RA)
-    whatsappHallMessage: 'Hola Reality Studio, quiero cotizar esta experiencia de RA',
+    // Mensaje del botón de WhatsApp dentro de la experiencia 3D (modal "Así se vería tu marca en 3D")
+    whatsapp3dMessage: 'Hola Reality Studio, quiero cotizar esta experiencia en 3D',
+
+    // Ruta de la página WebAR real (tracking con MindAR). Se usa tanto
+    // para armar el QR de escritorio como para el redirect directo en móvil.
+    arTrackingPageUrl: 'ar/tarjeta-corporativa.html',
 
     // 🔧 AUDIO — pega aquí las rutas cuando tengas los archivos reales.
-    // Mientras estén en null, el juego funciona igual mudo (sin errores).
+    // Mientras estén en null, todo funciona igual mudo (sin errores):
+    // el juego se juega sin efectos y la página carga sin música.
     audio: {
       shoot: null,   // ej. 'audio/shoot.mp3'
       hit: null,     // ej. 'audio/hit.mp3'
       gameOver: null,
-      music: null,
+      music: null,   // ej. 'audio/ambiente.mp3' — pista de fondo del sitio, arranca en el primer toque (ver initAmbientAudio)
     },
 
     // Endpoint del formulario de leads. Ejemplos válidos:
@@ -241,90 +246,11 @@
   }
 
   /* -------------------------------------------------------------------
-     6. LOGO 3D + PARTÍCULAS DE ORO — órbitas elípticas reactivas
-     ------------------------------------------------------------------- */
-  function initGoldOrbit(orbitId = 'logoOrbit', logoId = 'logo3d') {
-    const orbit = document.getElementById(orbitId);
-    const logo = document.getElementById(logoId);
-    if (!orbit || !logo) return null;
-
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    const particles = [];
-    for (let i = 0; i < CONFIG.goldParticleCount; i += 1) {
-      const el = document.createElement('span');
-      el.className = 'gold-particle';
-      orbit.appendChild(el);
-      particles.push({
-        el,
-        radiusX: 90 + Math.random() * 70,
-        radiusY: 30 + Math.random() * 40,
-        speed: 0.4 + Math.random() * 0.6,
-        offset: Math.random() * Math.PI * 2,
-        depthPhase: Math.random() * Math.PI * 2,
-      });
-    }
-
-    let pointer = { x: 0, y: 0 }; // -1..1, relativo al centro de la órbita
-    let frozen = false;
-
-    orbit.addEventListener('pointermove', (event) => {
-      const rect = orbit.getBoundingClientRect();
-      pointer.x = ((event.clientX - rect.left) / rect.width - 0.5) * 2;
-      pointer.y = ((event.clientY - rect.top) / rect.height - 0.5) * 2;
-    });
-
-    orbit.addEventListener('pointerleave', () => { pointer = { x: 0, y: 0 }; });
-
-    // Giroscopio en móviles (si el usuario concede permiso implícitamente)
-    if (window.DeviceOrientationEvent) {
-      window.addEventListener('deviceorientation', (event) => {
-        if (event.gamma == null || event.beta == null) return;
-        pointer.x = Math.max(-1, Math.min(1, event.gamma / 45));
-        pointer.y = Math.max(-1, Math.min(1, (event.beta - 45) / 45));
-      });
-    }
-
-    let t = 0;
-    function animate() {
-      if (!frozen) {
-        t += 0.016;
-        particles.forEach((p) => {
-          const angle = t * p.speed + p.offset;
-          const wobbleX = pointer.x * 18;
-          const wobbleY = pointer.y * 18;
-          const x = Math.cos(angle) * p.radiusX + wobbleX;
-          const y = Math.sin(angle) * p.radiusY * 0.6 + Math.sin(angle * 2 + p.depthPhase) * 6 + wobbleY;
-          const scale = 0.6 + (Math.sin(angle) + 1) * 0.35; // simula profundidad 3D
-          const z = Math.sin(angle);
-          p.el.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px) scale(${scale})`;
-          p.el.style.opacity = String(0.5 + z * 0.4);
-          p.el.style.zIndex = z > 0 ? '3' : '1';
-        });
-      }
-      if (!prefersReducedMotion) window.requestAnimationFrame(animate);
-    }
-
-    if (prefersReducedMotion) {
-      particles.forEach((p, i) => {
-        p.el.style.transform = `translate(-50%, -50%) translate(${Math.cos(i) * p.radiusX}px, ${Math.sin(i) * p.radiusY}px)`;
-      });
-    } else {
-      window.requestAnimationFrame(animate);
-    }
-
-    // initPortalModal() usa esto para congelar la órbita y encoger el logo
-    // en el momento exacto en que el usuario cruza hacia el salón.
-    return {
-      setPortalActive(active) {
-        frozen = active;
-        logo.classList.toggle('is-portal-active', active);
-      },
-    };
-  }
-
-  /* -------------------------------------------------------------------
      6.5. PORTAL 3D — escena WebGL con scroll-scrub (carga diferida)
+     NOTA (jul-2026): initGoldOrbit() del antiguo modo puerta→salón fue
+     retirado junto con el portal — ya no hay puerta ni logo 3D orbitando
+     partículas doradas en HTML/CSS; ese rol lo cumple ahora el modo
+     "showcase" de three-portal.js dentro del modal 3D.
      ------------------------------------------------------------------- */
   function initPortalScene(onSceneReady) {
     const section = document.getElementById('experiencia-ra');
@@ -401,57 +327,120 @@
   }
 
   /* -------------------------------------------------------------------
-     6.6. MODAL DEL PORTAL — puerta → gran salón, abierto desde "Probar RA"
-     Reutiliza el mismo mecanismo que antes vivía inline en la sección
-     (puerta con arco SVG + logo 3D + partículas doradas → salón con
-     pedestal). Ahora vive en un modal propio con su propia escena WebGL,
-     así no compite por el mismo canvas que el fondo de la sección.
+     6.6. MODAL DE TRACKING RA — abierto desde "Probar RA"
+     Comportamiento distinto por dispositivo:
+     - ESCRITORIO: abre este modal con 2 pasos (QR → imagen trigger).
+     - MÓVIL: NO abre modal — redirige directo a la página WebAR real,
+       que activa la cámara del propio teléfono (ver CONFIG.arTrackingPageUrl).
+
+     El portal puerta→salón fue retirado por completo del sitio; este
+     modal reemplaza esa función anterior con el flujo de tracking real.
      ------------------------------------------------------------------- */
-  function initPortalModal() {
+  function initRaTrackingModal() {
     const trigger = document.getElementById('probarRaBtn');
-    const modal = document.getElementById('portalModal');
-    const closeBtn = document.getElementById('portalModalClose');
-    const frame = document.getElementById('modalPortalFrame');
-    const doorStage = document.getElementById('modalDoorStage');
-    const hallStage = document.getElementById('modalHallStage');
-    const backBtn = document.getElementById('modalHallBack');
-    const loader = document.getElementById('modalPortalLoader');
-    const loaderWord = document.getElementById('modalPortalLoaderWord');
-    const canvas = document.getElementById('modalPortalCanvas');
-    const hallWhatsapp = document.getElementById('modalHallWhatsapp');
-    if (!trigger || !modal || !frame || !doorStage || !hallStage) return;
+    const modal = document.getElementById('raTrackingModal');
+    const closeBtn = document.getElementById('raTrackingClose');
+    const stepQr = document.getElementById('raTrackingStepQr');
+    const stepImage = document.getElementById('raTrackingStepImage');
+    const qrContainer = document.getElementById('raTrackingQr');
+    const toStep2Btn = document.getElementById('raTrackingToStep2');
+    const backToQrBtn = document.getElementById('raTrackingBackToQr');
+    const nextCardBtn = document.getElementById('raTrackingNextCard');
+    const soonNote = document.getElementById('raTrackingSoonNote');
+    if (!trigger || !modal || !stepQr || !stepImage) return;
 
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const HALL_WORDS = ['ABRIENDO', 'CRUZANDO_UMBRAL', 'CORE_LOAD_TRUE', 'RENDER::SALON', '0x52534F', 'BIENVENIDO'];
+    const isTouch = window.matchMedia('(hover: none), (pointer: coarse)').matches;
+    let qrBuilt = false;
 
-    // Enlace de WhatsApp del salón, armado desde CONFIG (mismo patrón del CTA arcade)
-    if (hallWhatsapp) {
-      const text = encodeURIComponent(CONFIG.whatsappHallMessage);
-      hallWhatsapp.setAttribute('href', `https://wa.me/${CONFIG.whatsappNumber}?text=${text}`);
+    function buildQr() {
+      if (qrBuilt || !qrContainer) return;
+      qrBuilt = true;
+      // URL absoluta de la página WebAR real, para que el QR funcione
+      // sin importar desde dónde se sirva el sitio.
+      const arUrl = new URL(CONFIG.arTrackingPageUrl, window.location.href).href;
+      const img = document.createElement('img');
+      img.src = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=8&data=${encodeURIComponent(arUrl)}`;
+      img.alt = 'Código QR — escanéalo con tu celular para abrir la experiencia de Realidad Aumentada';
+      img.width = 220;
+      img.height = 220;
+      qrContainer.appendChild(img);
     }
 
-    let state = 'closed'; // 'closed' | 'door' | 'transitioning' | 'hall'
-    let scene = null;
-    let goldOrbit = null;
-    let sceneLoadStarted = false;
+    function goToStepImage() {
+      stepQr.hidden = true;
+      stepImage.hidden = false;
+      backToQrBtn.focus();
+    }
 
-    function runLoader(durationMs, callback) {
-      if (!loader || !loaderWord || prefersReducedMotion) {
-        window.setTimeout(callback, prefersReducedMotion ? 150 : 0);
+    function goToStepQr() {
+      stepImage.hidden = true;
+      stepQr.hidden = false;
+    }
+
+    function openModal() {
+      // Móvil: nada de modal — directo a la experiencia real de cámara.
+      if (isTouch) {
+        window.location.href = CONFIG.arTrackingPageUrl;
         return;
       }
-      loader.classList.add('is-active');
-      let i = 0;
-      const intervalId = window.setInterval(() => {
-        loaderWord.textContent = HALL_WORDS[i % HALL_WORDS.length];
-        i += 1;
-      }, 100);
-      window.setTimeout(() => {
-        window.clearInterval(intervalId);
-        loader.classList.remove('is-active');
-        callback();
-      }, durationMs);
+      modal.hidden = false;
+      document.body.classList.add('is-locked');
+      goToStepQr();
+      buildQr();
+      closeBtn.focus();
+      document.addEventListener('keydown', onKeydown);
     }
+
+    function closeModal() {
+      modal.hidden = true;
+      document.body.classList.remove('is-locked');
+      document.removeEventListener('keydown', onKeydown);
+      trigger.focus();
+    }
+
+    function onKeydown(event) {
+      if (event.key === 'Escape') closeModal();
+    }
+
+    trigger.addEventListener('click', openModal);
+    closeBtn.addEventListener('click', closeModal);
+    toStep2Btn.addEventListener('click', goToStepImage);
+    if (backToQrBtn) backToQrBtn.addEventListener('click', goToStepQr);
+
+    // "Siguiente tarjeta": hoy solo existe 1 tarjeta real (la corporativa).
+    // Mostramos el aviso de "próximamente" en vez de un salto vacío —
+    // mismo patrón honesto usado en el lobby de juegos ("Próximo juego").
+    // 🔧 Cuando agregues una segunda tarjeta real, reemplaza este bloque
+    // por la navegación real entre tarjetas.
+    if (nextCardBtn) {
+      nextCardBtn.addEventListener('click', () => {
+        if (soonNote) soonNote.hidden = false;
+      });
+    }
+  }
+
+  /* -------------------------------------------------------------------
+     6.6.5 MODAL "ASÍ SE VERÍA TU MARCA EN 3D" — abierto desde #showcase3dBtn
+     Imagen de fondo a pantalla completa + modelo 3D centrado + partículas
+     doradas circulares en órbita (three-portal.js en modo showcase).
+     Canvas WebGL independiente, creado al abrir y destruido al cerrar —
+     mismo patrón de ciclo de vida ya validado en el resto del sitio.
+     ------------------------------------------------------------------- */
+  function initShowcase3dModal() {
+    const trigger = document.getElementById('showcase3dBtn');
+    const modal = document.getElementById('showcase3dModal');
+    const closeBtn = document.getElementById('showcase3dClose');
+    const canvas = document.getElementById('showcase3dCanvas');
+    const whatsappBtn = document.getElementById('showcase3dWhatsapp');
+    if (!trigger || !modal || !canvas) return;
+
+    if (whatsappBtn) {
+      const text = encodeURIComponent(CONFIG.whatsapp3dMessage);
+      whatsappBtn.setAttribute('href', `https://wa.me/${CONFIG.whatsappNumber}?text=${text}`);
+    }
+
+    let scene = null;
+    let sceneLoadStarted = false;
 
     function ensureScene() {
       if (sceneLoadStarted) return;
@@ -472,55 +461,20 @@
         import('./three-portal.js')
           .then(({ createPortalScene }) => {
             const isDesktop = window.matchMedia('(min-width: 769px)').matches;
-            scene = createPortalScene({ canvas, isMobile: !isDesktop });
-            // Vista fija dentro del modal: sin scroll-scrub, solo el
-            // movimiento ambiental propio de estrellas/figuras (idle).
-            scene.setProgress(0);
+            scene = createPortalScene({ canvas, isMobile: !isDesktop, showcaseMode: true });
             scene.setActive(true);
-            canvas.style.opacity = '1'; // el modal no depende de .is-webgl-active
           })
           .catch((err) => {
-            console.warn('[Reality Studio] No se pudo cargar la escena 3D del modal:', err);
+            console.warn('[Reality Studio] No se pudo cargar las partículas del modal 3D:', err);
           });
       }
-      // Si no hay WebGL o el usuario prefiere menos movimiento, el modal
-      // se queda con el fondo oscuro sólido — sigue siendo funcional,
-      // solo sin partículas.
-      if (!goldOrbit) goldOrbit = initGoldOrbit('modalLogoOrbit', 'modalLogo3d');
-    }
-
-    function enterHall() {
-      if (state !== 'door') return;
-      state = 'transitioning';
-
-      if (goldOrbit) goldOrbit.setPortalActive(true);
-      if ('vibrate' in navigator) {
-        try { navigator.vibrate(60); } catch (_) { /* silencioso */ }
-      }
-
-      runLoader(prefersReducedMotion ? 150 : 1100, () => {
-        doorStage.hidden = true;
-        hallStage.hidden = false;
-        modal.querySelector('.portal-modal__panel').classList.add('is-hall');
-        state = 'hall';
-        if (scene) scene.setHallMode(true);
-        if (backBtn) backBtn.focus();
-      });
-    }
-
-    function resetToDoor() {
-      state = 'door';
-      hallStage.hidden = true;
-      doorStage.hidden = false;
-      modal.querySelector('.portal-modal__panel').classList.remove('is-hall');
-      if (scene) scene.setHallMode(false);
-      if (goldOrbit) goldOrbit.setPortalActive(false);
+      // Sin WebGL o con reduced-motion: el modal se queda con la imagen
+      // de fondo y el modelo 3D estático — sigue siendo funcional.
     }
 
     function openModal() {
       modal.hidden = false;
       document.body.classList.add('is-locked');
-      state = 'door';
       ensureScene();
       closeBtn.focus();
       document.addEventListener('keydown', onKeydown);
@@ -531,8 +485,6 @@
       document.body.classList.remove('is-locked');
       if (scene) { scene.setActive(false); scene.destroy(); scene = null; }
       sceneLoadStarted = false;
-      resetToDoor();
-      state = 'closed';
       document.removeEventListener('keydown', onKeydown);
       trigger.focus();
     }
@@ -543,11 +495,9 @@
 
     trigger.addEventListener('click', openModal);
     closeBtn.addEventListener('click', closeModal);
-    frame.addEventListener('click', enterHall);
-    if (backBtn) backBtn.addEventListener('click', resetToDoor);
 
     modal.addEventListener('pointermove', (event) => {
-      if (!scene || state !== 'hall') return;
+      if (!scene) return;
       const rect = modal.getBoundingClientRect();
       const x = ((event.clientX - rect.left) / rect.width - 0.5) * 2;
       const y = ((event.clientY - rect.top) / rect.height - 0.5) * 2;
@@ -708,9 +658,15 @@
 
       try {
         if (CONFIG.formEndpoint) {
+          // 🔧 FIX CORS: Google Apps Script no responde a la petición
+          // "preflight" (OPTIONS) que el navegador dispara automáticamente
+          // cuando el Content-Type es 'application/json'. Enviando el body
+          // como 'text/plain' evitamos el preflight — Apps Script sigue
+          // recibiendo el mismo JSON en e.postData.contents y lo parsea
+          // igual con JSON.parse(), sin tocar nada del lado de Google.
           const response = await fetch(CONFIG.formEndpoint, {
             method: 'POST',
-            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify(payload),
           });
           if (!response.ok) throw new Error('Respuesta no exitosa del servidor');
@@ -822,12 +778,15 @@
     const overlay = document.getElementById('arcadeOverlay');
     const overlayTitle = document.getElementById('arcadeOverlayTitle');
     const overlayText = document.getElementById('arcadeOverlayText');
+    const overlayNote = document.getElementById('arcadeOverlayNote');
     const playBtn = document.getElementById('arcadePlay');
     const scoreEl = document.getElementById('arcadeScore');
-    const leftBtn = document.getElementById('arcadeLeft');
-    const rightBtn = document.getElementById('arcadeRight');
-    const shootBtn = document.getElementById('arcadeShoot');
+    const shootLeftBtn = document.getElementById('arcadeShootLeft');
+    const shootRightBtn = document.getElementById('arcadeShootRight');
     const rotateEl = document.getElementById('arcadeRotate');
+    const permissionDeniedEl = document.getElementById('arcadePermissionDenied');
+    const permissionRetryBtn = document.getElementById('arcadePermissionRetry');
+    const globalCta = document.getElementById('arcadeCta');
     if (!section || !lobby || !stage || !canvas || !overlay || !playBtn) return;
 
     const defaultOverlayText = overlayText.textContent;
@@ -838,19 +797,76 @@
     const isTouch = window.matchMedia('(hover: none), (pointer: coarse)').matches;
     const isLandscape = () => window.matchMedia('(orientation: landscape)').matches;
     let waitingForRotation = false;
+    let tiltListenerActive = false;
+
+    // En móvil avisamos de entrada que el juego pedirá permiso de sensor
+    if (overlayNote) overlayNote.hidden = !isTouch;
 
     function onScoreChange(score, lives, wave) {
       if (scoreEl) scoreEl.textContent = `PUNTAJE: ${score} · VIDAS: ${lives} · OLEADA ${wave}`;
     }
 
+    // El CTA flotante de WhatsApp del sitio se oculta mientras se juega
+    // (no debe competir con la vista del juego) y solo reaparece al
+    // terminar la partida (victoria o derrota) o al salir del juego.
+    function hideGlobalCta() {
+      if (globalCta) globalCta.classList.add('is-hidden-ingame');
+    }
+    function showGlobalCta() {
+      if (globalCta) globalCta.classList.remove('is-hidden-ingame');
+    }
+
     function onGameOver(finalScore, won) {
       playSfx('gameOver');
       overlay.hidden = false;
+      if (overlayNote) overlayNote.hidden = true;
       overlayTitle.textContent = won ? '¡Los venciste a todos!' : 'Fin del juego';
       overlayText.textContent =
         `Puntaje final: ${finalScore}. ¿Y si tu próxima campaña fuera así de directa? ` +
         'Escríbenos por el botón de WhatsApp.';
       playBtn.querySelector('span').textContent = 'Jugar de nuevo';
+      showGlobalCta();
+    }
+
+    // ---------------- Movimiento por inclinación (solo móvil/touch) ----------------
+    // iOS 13+ exige permiso explícito, solicitado en el mismo toque de
+    // "Jugar" para no sentirse como un paso adicional. Si el navegador no
+    // requiere permiso (Android, la mayoría), se activa directo.
+    const TILT_SENSITIVITY = 26; // grados de inclinación para velocidad máxima
+
+    function handleTilt(event) {
+      if (!game) return;
+      const angle = (window.screen && window.screen.orientation && window.screen.orientation.angle)
+        ?? window.orientation ?? 0;
+      let raw;
+      if (angle === 90) raw = -event.beta;
+      else if (angle === -90 || angle === 270) raw = event.beta;
+      else raw = event.gamma;
+      if (raw == null) return;
+      const value = Math.max(-1, Math.min(1, raw / TILT_SENSITIVITY));
+      game.setMove(value);
+    }
+
+    function startTiltListener() {
+      if (tiltListenerActive) return;
+      tiltListenerActive = true;
+      window.addEventListener('deviceorientation', handleTilt);
+    }
+
+    function stopTiltListener() {
+      if (!tiltListenerActive) return;
+      tiltListenerActive = false;
+      window.removeEventListener('deviceorientation', handleTilt);
+      if (game) game.setMove(0);
+    }
+
+    function requestTiltPermission() {
+      const DOE = window.DeviceOrientationEvent;
+      if (DOE && typeof DOE.requestPermission === 'function') {
+        return DOE.requestPermission().then((state) => state === 'granted');
+      }
+      // Navegadores que no exigen permiso explícito (Android, escritorio)
+      return Promise.resolve(true);
     }
 
     // ---------------- Pantalla completa horizontal (solo móvil/touch) ----------------
@@ -858,6 +874,8 @@
       waitingForRotation = false;
       if (rotateEl) rotateEl.hidden = true;
       overlay.hidden = true;
+      if (permissionDeniedEl) permissionDeniedEl.hidden = true;
+      hideGlobalCta();
       if (game) game.start();
     }
 
@@ -880,17 +898,15 @@
         window.removeEventListener('resize', onRotationCheck);
         window.removeEventListener('orientationchange', onRotationCheck);
         requestGameFullscreen();
+        startTiltListener();
         beginPlay();
       }
     }
 
-    function startPlayFlow() {
-      if (!isTouch) {
-        beginPlay();
-        return;
-      }
+    function proceedAfterPermission() {
       if (isLandscape()) {
         requestGameFullscreen();
+        startTiltListener();
         beginPlay();
         return;
       }
@@ -900,6 +916,24 @@
       if (rotateEl) rotateEl.hidden = false;
       window.addEventListener('resize', onRotationCheck);
       window.addEventListener('orientationchange', onRotationCheck);
+    }
+
+    function startPlayFlow() {
+      if (!isTouch) {
+        beginPlay();
+        return;
+      }
+      // Móvil: el juego SOLO arranca si el permiso de movimiento fue
+      // aceptado — sin ese sensor no hay forma de moverse en pantalla.
+      if (permissionDeniedEl) permissionDeniedEl.hidden = true;
+      requestTiltPermission().then((granted) => {
+        if (granted) {
+          proceedAfterPermission();
+        } else {
+          overlay.hidden = true;
+          if (permissionDeniedEl) permissionDeniedEl.hidden = false;
+        }
+      });
     }
 
     // Si el usuario sale de pantalla completa (botón atrás del sistema,
@@ -919,7 +953,9 @@
       controlsBound = true;
 
       playBtn.addEventListener('click', startPlayFlow);
+      if (permissionRetryBtn) permissionRetryBtn.addEventListener('click', startPlayFlow);
 
+      // Escritorio: flechas para moverse (fallback natural sin sensor)
       window.addEventListener('keydown', (event) => {
         if (!game || stage.hidden) return;
         if (event.key === 'ArrowLeft' || event.key === 'a' || event.key === 'A') game.setMove(-1);
@@ -935,30 +971,36 @@
         if (['ArrowLeft', 'ArrowRight', 'a', 'A', 'd', 'D'].includes(event.key)) game.setMove(0);
       });
 
-      const pressAndHold = (el, dir) => {
+      // Móvil: solo disparo por botón — dos, uno en cada esquina inferior,
+      // para no tapar el centro de la vista con el pulgar.
+      const bindShoot = (el) => {
         if (!el) return;
-        el.addEventListener('pointerdown', () => { if (game) game.setMove(dir); });
-        el.addEventListener('pointerup', () => { if (game) game.setMove(0); });
-        el.addEventListener('pointerleave', () => { if (game) game.setMove(0); });
+        el.addEventListener('pointerdown', (event) => {
+          event.preventDefault();
+          if (game) game.shoot();
+        });
       };
-      pressAndHold(leftBtn, -1);
-      pressAndHold(rightBtn, 1);
-      if (shootBtn) shootBtn.addEventListener('click', () => { if (game) game.shoot(); });
+      bindShoot(shootLeftBtn);
+      bindShoot(shootRightBtn);
 
       if (closeBtn) closeBtn.addEventListener('click', closeGame);
     }
 
     function closeGame() {
       if (game) game.stop();
+      stopTiltListener();
       stage.hidden = true;
       lobby.hidden = false;
       overlay.hidden = false;
       overlayText.textContent = defaultOverlayText;
+      if (overlayNote) overlayNote.hidden = !isTouch;
+      if (permissionDeniedEl) permissionDeniedEl.hidden = true;
       playBtn.querySelector('span').textContent = 'Jugar';
       if (rotateEl) rotateEl.hidden = true;
       waitingForRotation = false;
       window.removeEventListener('resize', onRotationCheck);
       window.removeEventListener('orientationchange', onRotationCheck);
+      showGlobalCta();
       // Nunca dejamos al usuario atrapado en pantalla completa u
       // orientación forzada al salir del juego.
       if (document.fullscreenElement || document.webkitFullscreenElement) {
@@ -980,6 +1022,7 @@
       overlay.hidden = false;
       overlayTitle.textContent = entry.title;
       overlayText.textContent = defaultOverlayText;
+      if (overlayNote) overlayNote.hidden = !isTouch;
       playBtn.querySelector('span').textContent = 'Jugar';
       stage.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
@@ -1044,6 +1087,57 @@
   }
 
   /* -------------------------------------------------------------------
+     11. AUDIO AMBIENTAL — arranca en el primer toque de la página
+     Ningún navegador permite reproducir audio con sonido de forma
+     automática sin interacción previa (política de autoplay). Por eso
+     se engancha al primer 'pointerdown'/'keydown' en cualquier parte de
+     la página, una sola vez, y luego se desactiva a sí mismo.
+     ------------------------------------------------------------------- */
+  let ambientAudioEl = null;
+
+  function initAmbientAudio() {
+    if (!CONFIG.audio || !CONFIG.audio.music) return; // 🔧 placeholder null: no hace nada aún
+
+    function startMusic() {
+      if (!ambientAudioEl) {
+        ambientAudioEl = new Audio(CONFIG.audio.music);
+        ambientAudioEl.loop = true;
+        ambientAudioEl.volume = 0.35;
+      }
+      ambientAudioEl.play().catch(() => { /* silencioso: el usuario podrá activarla con el botón de sonido */ });
+      window.removeEventListener('pointerdown', startMusic);
+      window.removeEventListener('keydown', startMusic);
+    }
+
+    window.addEventListener('pointerdown', startMusic, { once: true });
+    window.addEventListener('keydown', startMusic, { once: true });
+  }
+
+  /* -------------------------------------------------------------------
+     12. BOTÓN DE SONIDO — silencia/activa la pista ambiental
+     Funciona incluso si CONFIG.audio.music sigue en null (el botón queda
+     visible e interactivo, solo no hay nada que silenciar todavía).
+     ------------------------------------------------------------------- */
+  function initSoundToggle() {
+    const btn = document.getElementById('soundToggle');
+    const icon = document.getElementById('soundToggleIcon');
+    if (!btn) return;
+
+    let muted = false;
+
+    btn.addEventListener('click', () => {
+      muted = !muted;
+      if (ambientAudioEl) {
+        ambientAudioEl.muted = muted;
+        if (!muted) ambientAudioEl.play().catch(() => { /* silencioso */ });
+      }
+      btn.setAttribute('aria-pressed', String(muted));
+      btn.setAttribute('aria-label', muted ? 'Activar sonido' : 'Silenciar sonido');
+      if (icon) icon.textContent = muted ? '🔇' : '🔊';
+    });
+  }
+
+  /* -------------------------------------------------------------------
      INIT
      ------------------------------------------------------------------- */
   document.addEventListener('DOMContentLoaded', () => {
@@ -1063,11 +1157,14 @@
       if (raScene) raScene.setProgress(step / (total - 1));
     });
 
-    initPortalModal();
+    initRaTrackingModal();
+    initShowcase3dModal();
     initLeadForm();
     initArcadeCta();
     initGameLobby();
     initAnalytics();
     initMisc();
+    initAmbientAudio();
+    initSoundToggle();
   });
 })();

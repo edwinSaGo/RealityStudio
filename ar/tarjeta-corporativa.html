@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="es-CO">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Tarjeta de Presentación con Realidad Aumentada | Reality Studio</title>
+<meta name="description" content="Prueba en vivo una tarjeta de presentación con Realidad Aumentada WebAR: apunta tu cámara y mira aparecer el modelo 3D, sin instalar ninguna app. Un servicio real de Reality Studio, Bogotá, Colombia.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://realitystudio.lat/ar/tarjeta-corporativa.html">
+
+<!-- ============ Open Graph / Twitter Cards ============ -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Reality Studio">
+<meta property="og:locale" content="es_CO">
+<meta property="og:title" content="Tarjeta de Presentación con Realidad Aumentada | Reality Studio">
+<meta property="og:description" content="Apunta tu cámara a la tarjeta y mira aparecer la experiencia en Realidad Aumentada — demo real de Reality Studio.">
+<meta property="og:url" content="https://realitystudio.lat/ar/tarjeta-corporativa.html">
+<meta property="og:image" content="https://realitystudio.lat/assets/img/og-cover.jpg">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="icon" type="image/svg+xml" href="../img/favicon.png">
+<link rel="alternate icon" href="../img/favicon.png">
+
+<!-- ============ Tipografía de marca (misma familia que el sitio principal) ============ -->
+<link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@700,600&f[]=general-sans@400,500,600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap">
+
+<!-- ============ Schema.org — Service, referenciado al ProfessionalService principal ============ -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "name": "Tarjeta de Presentación con Realidad Aumentada",
+  "serviceType": "Realidad Aumentada WebAR",
+  "url": "https://realitystudio.lat/ar/tarjeta-corporativa.html",
+  "description": "Tarjetas de presentación físicas que activan una experiencia de Realidad Aumentada al apuntar la cámara del celular, sin necesidad de instalar una app.",
+  "areaServed": [
+    { "@type": "Country", "name": "Colombia" },
+    { "@type": "Place", "name": "Latinoamérica" }
+  ],
+  "provider": {
+    "@type": "ProfessionalService",
+    "name": "Reality Studio",
+    "url": "https://realitystudio.lat/"
+  }
+}
+</script>
+
+<!-- ============ MindAR + A-Frame (solo se cargan en esta página) ============ -->
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+<style>
+  /* -------------------------------------------------------------------
+     Página autónoma y liviana: no depende de style.css del sitio
+     principal (esa hoja carga estilos que esta página no usa). Reusa
+     los mismos tokens de marca para mantener coherencia visual.
+     ------------------------------------------------------------------- */
+  :root{
+    --turquesa: #23CED9;
+    --jade: #097C87;
+    --amarillo: #F9D779;
+    --peach: #FCA47C;
+    --menta: #A1CCA6;
+    --ink: #06211F;
+    --paper: #F6F1E7;
+    --space-deep: #050A10;
+    --font-display: 'Clash Display', 'Arial Black', sans-serif;
+    --font-body: 'General Sans', 'Helvetica Neue', Arial, sans-serif;
+    --font-mono: 'Space Mono', 'Courier New', monospace;
+  }
+
+  *, *::before, *::after{ box-sizing: border-box; }
+
+  html, body{
+    margin: 0;
+    background: var(--space-deep);
+    color: var(--paper);
+    font-family: var(--font-body);
+    overflow-x: hidden;
+  }
+
+  a{ color: inherit; }
+
+  .eyebrow{
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--menta);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6em;
+  }
+
+  h1, h2{
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    line-height: 1.02;
+    margin: 0;
+  }
+
+  .btn{
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 0.9em 1.6em;
+    border-radius: 999px;
+    border: 1.5px solid currentColor;
+    background: transparent;
+    color: var(--paper);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5em;
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform 0.2s ease;
+  }
+  .btn:hover{ transform: translateY(-2px); }
+  .btn--solid{ background: var(--amarillo); color: var(--ink); border-color: var(--amarillo); }
+  .btn--whatsapp{ background: #25D366; color: #06210f; border-color: #25D366; }
+  .btn--ghost{ opacity: 0.55; cursor: default; }
+  .btn--ghost:hover{ transform: none; }
+
+  /* ---------------- Introducción (contenido real para SEO) ---------------- */
+  .ar-intro{
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1.4rem;
+    padding: clamp(2rem, 6vw, 4rem);
+    max-width: 720px;
+    margin: 0 auto;
+    text-align: left;
+  }
+
+  .ar-intro h1{ font-size: clamp(1.8rem, 5vw, 2.8rem); }
+
+  .ar-intro p{
+    font-size: 1rem;
+    line-height: 1.6;
+    opacity: 0.88;
+    max-width: 56ch;
+  }
+
+  .ar-intro__steps{
+    display: grid;
+    gap: 0.7rem;
+    font-size: 0.92rem;
+    opacity: 0.9;
+    margin: 0;
+    padding-left: 1.2rem;
+  }
+
+  .ar-intro__note{
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    color: var(--menta);
+    opacity: 0.9;
+  }
+
+  .ar-intro__back{
+    align-self: flex-start;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--menta);
+    text-decoration: none;
+  }
+
+  /* ---------------- Escena AR ---------------- */
+  #arSceneWrap{
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    background: var(--space-deep);
+  }
+
+  #arSceneWrap[hidden]{ display: none; }
+
+  a-scene{ width: 100%; height: 100%; }
+
+  /* Menú flotante sobre la vista de cámara */
+  #menu-container{
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    z-index: 20;
+  }
+
+  #menu-toggle{
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--paper);
+    background: rgba(6, 33, 31, 0.72);
+    backdrop-filter: blur(6px);
+    border: 1.5px solid rgba(246, 241, 231, 0.35);
+    border-radius: 999px;
+    padding: 0.7em 1.1em;
+    cursor: pointer;
+  }
+
+  #menu-toggle:hover{ border-color: var(--amarillo); color: var(--amarillo); }
+
+  #menu-options{
+    margin-top: 0.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    background: rgba(6, 33, 31, 0.85);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(246, 241, 231, 0.2);
+    border-radius: 14px;
+    padding: 0.9rem;
+    width: min(78vw, 260px);
+  }
+
+  #menu-options.hidden{ display: none; }
+
+  #menu-options .btn{ width: 100%; justify-content: center; }
+
+  .ar-instructions{
+    position: fixed;
+    left: 50%;
+    bottom: 1.2rem;
+    transform: translateX(-50%);
+    z-index: 20;
+    background: rgba(6, 33, 31, 0.78);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(246, 241, 231, 0.2);
+    border-radius: 14px;
+    padding: 0.8rem 1.2rem;
+    font-size: 0.82rem;
+    text-align: center;
+    max-width: min(90vw, 380px);
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     INTRODUCCIÓN — contenido real de servicio (SEO), visible antes
+     de pedir permiso de cámara. Al tocar "Iniciar cámara" se muestra
+     la escena AR y se activa la cámara del teléfono.
+     ============================================================ -->
+<main class="ar-intro" id="arIntro">
+  <a class="ar-intro__back" href="../index.html">← Volver a Reality Studio</a>
+  <p class="eyebrow">Realidad Aumentada · Demo real</p>
+  <h1>Tu tarjeta de presentación, viva en la cámara de tu cliente.</h1>
+  <p>
+    Esta es una demostración real de Realidad Aumentada WebAR hecha por Reality Studio en Bogotá, Colombia.
+    Convertimos objetos físicos de tu marca — tarjetas de presentación, empaques, textil, mobiliario de evento —
+    en experiencias digitales que se activan con solo apuntar la cámara, sin que tu cliente tenga que instalar
+    ninguna aplicación.
+  </p>
+  <ol class="ar-intro__steps">
+    <li>Toca "Iniciar cámara" y acepta el permiso de tu navegador.</li>
+    <li>Apunta la cámara a la tarjeta corporativa de Reality Studio.</li>
+    <li>Espera unos segundos: el modelo 3D aparecerá flotando sobre la tarjeta.</li>
+  </ol>
+  <button class="btn btn--solid" id="startArBtn" type="button">Iniciar cámara y ver la RA</button>
+  <p class="ar-intro__note">Necesitamos acceso a tu cámara solo mientras usas esta página — no se graba ni se guarda nada.</p>
+</main>
+
+<!-- ============================================================
+     ESCENA AR — se muestra solo después de "Iniciar cámara"
+     ============================================================ -->
+<div id="arSceneWrap" hidden>
+
+  <!-- Menú flotante -->
+  <div id="menu-container">
+    <button id="menu-toggle" type="button">☰ Menú</button>
+    <div id="menu-options" class="hidden">
+      <a class="btn" href="../index.html">🏠 Volver al home</a>
+      <!-- 🔧 "Otras tarjetas": hoy solo existe esta experiencia real.
+           Cuando compiles el .mind de una segunda tarjeta, reemplaza estos
+           dos botones por enlaces reales a sus páginas WebAR. -->
+      <button class="btn btn--ghost" type="button" disabled>🃏 Otra tarjeta — próximamente</button>
+      <button class="btn btn--ghost" type="button" disabled>🃏 Otra tarjeta — próximamente</button>
+      <a class="btn btn--whatsapp"
+         href="https://wa.me/573173020116?text=Hola%20Reality%20Studio%2C%20me%20gustar%C3%ADa%20explorar%20c%C3%B3mo%20puedo%20aplicar%20la%20Realidad%20Aumentada%20a%20mi%20producto%20o%20proyecto."
+         target="_blank" rel="noopener">
+        Escríbenos por WhatsApp
+      </a>
+    </div>
+  </div>
+
+  <p class="ar-instructions">Apunta la cámara a la tarjeta corporativa de Reality Studio</p>
+
+  <a-scene id="arScene"
+           mindar-image="imageTargetSrc: ../models/target_tarjeta_grab.mind;
+                         filterMinCF: 0.0001;
+                         filterBeta: 0.01;
+                         missTolerance: 5"
+           color-space="sRGB"
+           renderer="colorManagement: true, physicallyCorrectLights"
+           vr-mode-ui="enabled: false"
+           device-orientation-permission-ui="enabled: false"
+           embedded>
+    <a-assets>
+      <!-- 🔧 REEMPLAZAR: imagen de la tarjeta que se dibuja sobre el
+           target reconocido (debe ser la misma usada para compilar
+           target_tarjeta_grab.mind). -->
+      <img id="card" src="../img/PLACEHOLDER-imagen-trigger.png" />
+      <a-asset-item id="rsModel" src="../models/Logo Reality_Animado.glb"></a-asset-item>
+    </a-assets>
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+    <a-entity mindar-image-target="targetIndex: 0">
+      <a-plane src="#card" position="0 0 0" height="0.552" width="1"
+               rotation="0 0 0" scale="0.001 0.001 0.001"></a-plane>
+      <a-gltf-model rotation="0 90 0" position="0 -0.2 0.8" scale="0.6 0.6 0.6"
+                    src="#rsModel"
+                    animation="property: position; to: 0 -0.5 0.8; dur: 1000;
+                               easing: easeInOutQuad; loop: true; dir: alternate">
+      </a-gltf-model>
+    </a-entity>
+  </a-scene>
+</div>
+
+<script>
+  (() => {
+    'use strict';
+    const intro = document.getElementById('arIntro');
+    const sceneWrap = document.getElementById('arSceneWrap');
+    const startBtn = document.getElementById('startArBtn');
+    const menuToggle = document.getElementById('menu-toggle');
+    const menuOptions = document.getElementById('menu-options');
+
+    startBtn.addEventListener('click', () => {
+      intro.hidden = true;
+      sceneWrap.hidden = false;
+    });
+
+    menuToggle.addEventListener('click', () => {
+      menuOptions.classList.toggle('hidden');
+    });
+  })();
+</script>
+
+</body>
+</html>

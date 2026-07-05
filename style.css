@@ -714,175 +714,14 @@ html{
   opacity: 1;
 }
 
-.portal-stage,
-.hall-stage{
-  position: relative;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2.2rem;
-  text-align: center;
-}
-
-.portal-stage[hidden],
-.hall-stage[hidden]{ display: none; }
-
-.portal-stage .eyebrow,
-.hall-stage .eyebrow{ color: var(--menta); }
-
-.portal-stage__title,
-.hall-stage__title{
-  font-size: var(--fs-h2);
-  text-transform: uppercase;
-  max-width: 620px;
-}
-
-/* ---------------- Marco del portal (botón que activa el cruce) ---------------- */
-.portal-frame{
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: min(60vw, 260px);
-  aspect-ratio: 220 / 300;
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-}
-
-.portal-frame:focus-visible{
-  outline: 3px solid var(--amarillo);
-  outline-offset: 8px;
-  border-radius: 12px;
-}
-
-.portal-frame__arch{
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-}
-
-.portal-frame__stone{
-  fill: none;
-  stroke: var(--menta);
-  stroke-width: 10;
-  opacity: 0.35;
-}
-
-.portal-frame__rune{
-  fill: none;
-  stroke: var(--amarillo);
-  stroke-width: 1.5;
-  stroke-dasharray: 4 6;
-  opacity: 0.55;
-  animation: portal-rune-spin 12s linear infinite;
-}
-
-.portal-frame__gem{
-  fill: var(--amarillo);
-  filter: drop-shadow(0 0 6px rgba(249, 215, 121, 0.8));
-  animation: twinkle 2.6s ease-in-out infinite;
-}
-
-@keyframes portal-rune-spin{
-  from{ stroke-dashoffset: 0; }
-  to{ stroke-dashoffset: 200; }
-}
-
-.portal-frame:hover .portal-frame__stone,
-.portal-frame:focus-visible .portal-frame__stone{
-  opacity: 0.6;
-}
-
-.portal-frame .logo-orbit{
-  position: relative;
-  z-index: 1;
-  width: 55%;
-  aspect-ratio: 1;
-}
-
-/* ---------------- El salón ---------------- */
-.hall-pedestal{
-  position: relative;
-  width: min(70vw, 340px);
-  aspect-ratio: 4 / 3;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding-bottom: 1rem;
-}
-
-.hall-pedestal::before{
-  content: '';
-  position: absolute;
-  left: 50%; bottom: 0;
-  transform: translateX(-50%);
-  width: 88%;
-  height: 22%;
-  border-radius: 50%;
-  background: radial-gradient(ellipse at center, rgba(249,215,121,0.5), transparent 70%);
-  filter: blur(2px);
-}
-
-.hall-figure-slot{
-  position: relative;
-  z-index: 1;
-  width: 56%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.12), rgba(9,124,135,0.25));
-  border: 1.5px dashed rgba(249,215,121,0.6);
-}
-
-.hall-figure-slot__mark{
-  font-family: var(--font-display);
-  font-size: 1.6rem;
-  color: var(--amarillo);
-  opacity: 0.6;
-}
-
-.hall-back{
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--menta);
-  background: none;
-  border: 1px solid var(--menta);
-  border-radius: var(--radius-pill);
-  padding: 0.7em 1.3em;
-}
-
-.hall-back:hover,
-.hall-back:focus-visible{
-  color: var(--ink);
-  background: var(--menta);
-}
-
-.hall-stage__actions{
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.9rem;
-}
-
-.hall-cta-whatsapp{ color: var(--amarillo); }
-.hall-cta-whatsapp span{ color: var(--ink); }
-
 /* ---------------------------------------------------------------------
-   7.5 MODAL DEL PORTAL — puerta → salón, disparado por "Probar RA"
-   Reutiliza los mismos componentes visuales (portal-frame, hall-stage,
-   logo-3d, partículas doradas) ya definidos arriba, solo dentro de un
-   overlay de pantalla completa con su propio lienzo WebGL.
+   7.5 MODAL 1 — TRACKING RA (QR + imagen trigger)
+   Reemplaza por completo al antiguo portal puerta→salón. Dos pasos
+   fundidos por visibilidad (nunca ambos a la vez): QR primero, imagen
+   trigger después. Solo se abre en escritorio — en móvil el botón
+   "Probar RA" redirige directo a la página WebAR real.
    --------------------------------------------------------------------- */
-.portal-modal{
+.tracking-modal{
   position: fixed;
   inset: 0;
   z-index: 900;
@@ -891,36 +730,29 @@ html{
   justify-content: center;
 }
 
-.portal-modal[hidden]{ display: none; }
+.tracking-modal[hidden]{ display: none; }
 
-.portal-modal__backdrop{
+.tracking-modal__backdrop{
   position: absolute;
   inset: 0;
-  background: rgba(5, 10, 16, 0.9);
+  background: rgba(5, 10, 16, 0.92);
   backdrop-filter: blur(6px);
 }
 
-.portal-modal__panel{
+.tracking-modal__panel{
   position: relative;
   z-index: 1;
-  width: min(94vw, 720px);
-  height: min(90svh, 780px);
+  width: min(94vw, 560px);
+  max-height: 90svh;
+  overflow-y: auto;
   background: var(--space-deep);
   border-radius: var(--radius-md);
   border: 1px solid rgba(255,255,255,0.12);
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  padding: clamp(2rem, 5vw, 3rem) clamp(1.5rem, 4vw, 2.5rem);
+  color: var(--white);
 }
 
-.portal-modal__bg{
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-}
-
-.portal-modal__close{
+.tracking-modal__close{
   position: absolute;
   top: 0.9rem;
   right: 0.9rem;
@@ -936,134 +768,183 @@ html{
   justify-content: center;
 }
 
-.portal-modal__close:hover,
-.portal-modal__close:focus-visible{
+.tracking-modal__close:hover,
+.tracking-modal__close:focus-visible{
   border-color: var(--amarillo);
   color: var(--amarillo);
 }
 
-.portal-modal .portal-stage,
-.portal-modal .hall-stage{
-  position: relative;
-  z-index: 2;
-  padding: 2rem 1.5rem;
-}
-
-/* Tono cálido ambiental cuando se está dentro del salón (ahora en el modal) */
-.portal-modal__panel.is-hall::after{
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background: radial-gradient(ellipse at 50% 70%, rgba(249,215,121,0.14), transparent 65%);
-}
-
-/* ---------------- Overlay de carga (puerta → salón) ---------------- */
-.portal-loader{
-  position: absolute;
-  inset: 0;
-  z-index: 5;
+.tracking-stage{
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  background: var(--black);
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.35s var(--ease-in-out), visibility 0.35s var(--ease-in-out);
+  text-align: center;
+  gap: 1.2rem;
 }
 
-.portal-loader.is-active{
-  opacity: 1;
-  visibility: visible;
-}
+.tracking-stage[hidden]{ display: none; }
 
-.portal-loader__word{
-  font-family: var(--font-mono);
-  font-size: clamp(1.1rem, 3.4vw, 1.9rem);
-  letter-spacing: 0.05em;
-  color: var(--turquesa);
+.tracking-stage .eyebrow{ color: var(--menta); }
+
+.tracking-stage__title{
+  font-size: var(--fs-h2);
   text-transform: uppercase;
 }
 
-.gold-particle{
-  position: absolute;
-  top: 50%; left: 50%;
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 30% 30%, #fff6d8, var(--amarillo) 60%, var(--peach));
-  box-shadow: 0 0 10px rgba(249, 215, 121, 0.7);
-  pointer-events: none;
-  will-change: transform;
-}
-
-.portal-hint{
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--menta);
+.tracking-stage__text{
+  font-size: var(--fs-body);
+  max-width: 42ch;
   opacity: 0.85;
 }
 
-.logo-orbit{
-  position: relative;
-  width: min(58vw, 380px);
+.tracking-qr{
+  width: min(70vw, 220px);
   aspect-ratio: 1;
-  perspective: 1200px;
-}
-
-.logo-3d{
-  position: absolute;
-  inset: 0;
-  margin: auto;
-  width: 46%;
-  height: 46%;
-  transform-style: preserve-3d;
-  cursor: pointer;
-  transition: transform 0.4s var(--ease-in-out), opacity 0.4s ease-in;
-  animation: float-idle 6s ease-in-out infinite;
-}
-
-.logo-3d.is-portal-active{
-  transition: transform 0.4s ease-in, opacity 0.4s ease-in;
-  transform: scale(25);
-  opacity: 0;
-}
-
-@keyframes float-idle{
-  0%, 100%{ transform: translateY(0) rotateX(12deg) rotateY(0deg); }
-  50%{ transform: translateY(-14px) rotateX(12deg) rotateY(180deg); }
-}
-
-.logo-3d__face{
-  position: absolute;
-  inset: 0;
+  background: var(--white);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-display);
-  font-size: clamp(1.4rem, 4vw, 2.2rem);
-  color: var(--ink);
-  background: linear-gradient(135deg, var(--turquesa), var(--menta));
-  border: 2px solid rgba(255,255,255,0.5);
-  border-radius: 22%;
-  backface-visibility: hidden;
 }
 
-.logo-3d__face--back{
-  background: linear-gradient(135deg, var(--amarillo), var(--peach));
-  transform: rotateY(180deg) translateZ(0.1px);
+.tracking-qr img{ width: 100%; height: 100%; object-fit: contain; }
+
+.tracking-trigger-frame{
+  width: min(70vw, 260px);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1.5px dashed rgba(249,215,121,0.6);
 }
 
-.logo-3d__face--edge{
-  background: var(--jade);
-  transform: rotateY(90deg) translateZ(0);
-  width: 12%;
-  left: 44%;
-  border-radius: 0;
+.tracking-trigger-frame img{ width: 100%; display: block; }
+
+.tracking-stage__next{ color: var(--amarillo); }
+.tracking-stage__next span{ color: var(--ink); }
+
+.tracking-stage__back{
+  color: var(--menta);
+  border-color: var(--menta);
+}
+
+.tracking-stage__actions{
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.8rem;
+}
+
+.tracking-stage__soon{
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--menta);
   opacity: 0.9;
 }
+
+.tracking-stage__soon[hidden]{ display: none; }
+
+/* ---------------------------------------------------------------------
+   7.6 MODAL 2 — "ASÍ SE VERÍA TU MARCA EN 3D"
+   Imagen de fondo a pantalla completa (la sube el cliente) + partículas
+   doradas circulares (three-portal.js, modo showcase) + modelo 3D
+   centrado vía <model-viewer> + CTA de cotización.
+   --------------------------------------------------------------------- */
+.showcase3d-trigger{
+  align-self: flex-start;
+  margin-top: 0.6rem;
+  color: var(--ink);
+  border-color: var(--ink);
+}
+.showcase3d-trigger span{ color: var(--paper); }
+
+.showcase3d-modal{
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  overflow: hidden;
+}
+
+.showcase3d-modal[hidden]{ display: none; }
+
+.showcase3d-modal__bg{
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.showcase3d-modal__bg img{
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.showcase3d-modal__scrim{
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(5,10,16,0.55) 0%, rgba(5,10,16,0.25) 40%, rgba(5,10,16,0.8) 100%);
+}
+
+.showcase3d-canvas{
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.showcase3d-modal__close{
+  position: absolute;
+  top: 1.2rem;
+  right: 1.2rem;
+  z-index: 3;
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.35);
+  background: rgba(5,10,16,0.55);
+  color: var(--white);
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.showcase3d-modal__close:hover,
+.showcase3d-modal__close:focus-visible{
+  border-color: var(--amarillo);
+  color: var(--amarillo);
+}
+
+.showcase3d-modal__content{
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 1.2rem;
+  padding: clamp(3rem, 8vh, 5rem) var(--gutter);
+  color: var(--white);
+}
+
+.showcase3d-modal__content .eyebrow{ color: var(--menta); }
+
+.showcase3d-modal__title{
+  font-size: var(--fs-h2);
+  text-transform: uppercase;
+  max-width: 640px;
+}
+
+.showcase3d-model{
+  width: min(60vw, 320px);
+  aspect-ratio: 1;
+}
+
+.showcase3d-cta{ color: var(--amarillo); }
+.showcase3d-cta span{ color: var(--ink); }
 
 #probarRaBtn{
   color: rgb(0, 223, 0);
@@ -1253,6 +1134,15 @@ html{
   transition: transform 0.16s ease-out;
 }
 
+/* Oculto mientras el usuario está jugando (ver script.js → initGameLobby):
+   solo reaparece al terminar la partida o salir del juego, para no
+   competir visualmente con la vista del juego en pantalla completa. */
+.arcade-cta.is-hidden-ingame{
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
 .arcade-cta__button{
   position: relative;
   display: flex;
@@ -1318,6 +1208,35 @@ html{
 @media (max-width: 480px){
   .arcade-cta__label{ display: none; }
   .arcade-cta__button{ padding: 0.85em; border-radius: 50%; }
+}
+
+/* ---------------------------------------------------------------------
+   10.2 BOTÓN DE SONIDO — silencia/activa la pista ambiental
+   Esquina inferior izquierda, simétrico al CTA de WhatsApp que vive en
+   la inferior derecha, para no chocar visualmente entre ambos.
+   --------------------------------------------------------------------- */
+.sound-toggle{
+  position: fixed;
+  left: clamp(1rem, 4vw, 2.4rem);
+  bottom: clamp(1rem, 4vw, 2.4rem);
+  z-index: var(--z-whatsapp);
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(246, 241, 231, 0.35);
+  background: rgba(6, 33, 31, 0.55);
+  backdrop-filter: blur(6px);
+  color: var(--paper);
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform var(--dur-fast) var(--ease-out-expo), border-color var(--dur-fast);
+}
+
+.sound-toggle:hover,
+.sound-toggle:focus-visible{
+  transform: translateY(-2px);
+  border-color: var(--amarillo);
 }
 
 /* ---------------------------------------------------------------------
@@ -1500,6 +1419,43 @@ html{
   opacity: 0.85;
 }
 
+.arcade-game__overlay-note{
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.02em;
+  color: var(--amarillo);
+  max-width: 34ch;
+  opacity: 0.9;
+}
+
+.arcade-game__overlay-note[hidden]{ display: none; }
+
+/* Aviso cuando el usuario niega el permiso del sensor de movimiento —
+   el juego no puede arrancar sin él (el control lateral depende del
+   giroscopio en móvil), así que se pide reintentar. */
+.arcade-game__permission-denied{
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.2rem;
+  padding: 2rem;
+  background: rgba(5, 10, 16, 0.94);
+  text-align: center;
+}
+
+.arcade-game__permission-denied[hidden]{ display: none; }
+
+.arcade-game__permission-denied p{
+  font-size: 0.92rem;
+  max-width: 36ch;
+  color: var(--paper);
+  opacity: 0.9;
+}
+
 .arcade-game__hud{
   position: absolute;
   top: 0.8rem;
@@ -1511,39 +1467,41 @@ html{
   color: var(--amarillo);
 }
 
+/* Movimiento lateral = inclinar el teléfono (ver script.js →
+   deviceorientation). Solo quedan los dos botones de disparo, cada uno
+   en una esquina inferior y lejos del centro, para no tapar la acción
+   con el pulgar mientras se juega. */
 .arcade-game__controls{
   position: absolute;
-  bottom: 0.8rem;
-  left: 0; right: 0;
+  inset: 0;
+  bottom: 0;
   z-index: 1;
   display: none;
-  justify-content: center;
-  align-items: center;
-  gap: 1rem;
-  padding-inline: 1rem;
-}
-
-.arcade-game__controls-move{
-  display: flex;
-  gap: 0.8rem;
+  pointer-events: none;
 }
 
 .arcade-game__ctrl{
-  width: 52px; height: 52px;
+  width: 58px; height: 58px;
   border-radius: 50%;
   border: 2px solid var(--turquesa);
   background: rgba(9,124,135,0.35);
   color: var(--white);
   font-size: 1.1rem;
+  pointer-events: auto;
 }
 
 .arcade-game__ctrl--shoot{
+  position: absolute;
+  bottom: 0.9rem;
   border-color: var(--amarillo);
   background: rgba(249,215,121,0.25);
 }
 
+.arcade-game__ctrl--shoot-left{ left: 0.9rem; }
+.arcade-game__ctrl--shoot-right{ right: 0.9rem; }
+
 @media (hover: none){
-  .arcade-game__controls{ display: flex; justify-content: space-between; }
+  .arcade-game__controls{ display: block; }
 }
 
 /* Aviso de rotación — solo aparece en móvil/portrait al intentar jugar */
@@ -1575,9 +1533,9 @@ html{
 }
 
 /* Modo pantalla completa (móvil, landscape forzado): el juego ocupa toda
-   la pantalla y los controles se reposicionan a las esquinas — mover a
-   la izquierda, disparar a la derecha, siguiendo el patrón estándar de
-   shooters móviles para minimizar error de dedo tapando la acción. */
+   la pantalla. El movimiento lateral se hace inclinando el teléfono, así
+   que solo hay dos botones de disparo, uno en cada esquina inferior,
+   fuera del centro de la vista para no tapar la acción con el pulgar. */
 .arcade-game:fullscreen,
 .arcade-game:-webkit-full-screen{
   width: 100vw;
@@ -1597,17 +1555,21 @@ html{
 
 .arcade-game:fullscreen .arcade-game__controls,
 .arcade-game:-webkit-full-screen .arcade-game__controls{
-  display: flex;
-  justify-content: space-between;
-  bottom: 1.2rem;
-  padding-inline: 1.6rem;
+  display: block;
 }
 
-.arcade-game:fullscreen .arcade-game__ctrl,
-.arcade-game:-webkit-full-screen .arcade-game__ctrl{
-  width: 64px; height: 64px;
+.arcade-game:fullscreen .arcade-game__ctrl--shoot,
+.arcade-game:-webkit-full-screen .arcade-game__ctrl--shoot{
+  bottom: 1.4rem;
+  width: 68px; height: 68px;
   font-size: 1.4rem;
 }
+
+.arcade-game:fullscreen .arcade-game__ctrl--shoot-left,
+.arcade-game:-webkit-full-screen .arcade-game__ctrl--shoot-left{ left: 1.4rem; }
+
+.arcade-game:fullscreen .arcade-game__ctrl--shoot-right,
+.arcade-game:-webkit-full-screen .arcade-game__ctrl--shoot-right{ right: 1.4rem; }
 
 /* ---------------------------------------------------------------------
    11. PROGRESS BAR — avance de lectura vertical de toda la página
@@ -1647,7 +1609,7 @@ html{
 
 @media (max-width: 480px){
   .hero__content{ gap: 1rem; }
-  .logo-orbit{ width: 70vw; }
+  .showcase3d-model{ width: 70vw; }
 }
 
 /* ---------------------------------------------------------------------

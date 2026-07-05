@@ -40,6 +40,9 @@
 <!-- ============ Preconnect a CDN de Three.js (carga diferida, ver script.js) ============ -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
+<!-- ============ Preconnect al generador de QR (modal "Experimenta la RA") ============ -->
+<link rel="preconnect" href="https://api.qrserver.com" crossorigin>
+
 <!-- Clash Display + General Sans (Fontshare) -->
 <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@700,600&f[]=general-sans@400,500,600&display=swap">
 <!-- Space Mono (Google Fonts) -->
@@ -220,6 +223,10 @@
           <span>Apps para eventos</span>
           <span>Desarrollo Web a medida</span>
         </div>
+
+        <button class="btn btn--solid showcase3d-trigger" id="showcase3dBtn" type="button">
+          <span>Así se vería tu marca en 3D</span>
+        </button>
       </div>
     </section>
 
@@ -320,8 +327,15 @@
 
         <div class="arcade-game__overlay" id="arcadeOverlay">
           <p class="arcade-game__overlay-title" id="arcadeOverlayTitle">Defiende tu marca</p>
-          <p class="arcade-game__overlay-text" id="arcadeOverlayText">Cada bloque es una mala práctica de marketing genérico —spam, banners, pop-ups, clickbait— que le resta atención a tu marca. Muévete con las flechas o desliza, dispara con espacio o el botón, y derríbalos antes de que lleguen a ti.</p>
+          <p class="arcade-game__overlay-text" id="arcadeOverlayText">Cada bloque es una mala práctica de marketing genérico —spam, banners, pop-ups, clickbait— que le resta atención a tu marca. En computador, muévete con las flechas y dispara con espacio. En celular, inclina tu teléfono a los lados para moverte y usa los botones para disparar.</p>
+          <p class="arcade-game__overlay-note" id="arcadeOverlayNote" hidden>Tu teléfono te pedirá permiso para usar el sensor de movimiento — acéptalo para poder jugar.</p>
           <button class="btn btn--solid arcade-game__play" id="arcadePlay" type="button"><span>Jugar</span></button>
+        </div>
+
+        <!-- Aviso si el permiso de movimiento fue rechazado (solo móvil) -->
+        <div class="arcade-game__permission-denied" id="arcadePermissionDenied" hidden>
+          <p>Necesitamos permiso para usar el sensor de movimiento de tu teléfono y así puedas jugar inclinándolo. Actívalo desde los ajustes de tu navegador e inténtalo de nuevo.</p>
+          <button class="btn btn--solid" id="arcadePermissionRetry" type="button"><span>Intentar de nuevo</span></button>
         </div>
 
         <!-- Aviso de rotación — solo se muestra en móvil/portrait al intentar jugar -->
@@ -333,14 +347,13 @@
           <span id="arcadeScore">PUNTAJE: 0 · VIDAS: 3 · OLEADA 1</span>
         </div>
 
-        <!-- Controles: cluster de movimiento a la izquierda, disparo a la derecha
-             (disposición pensada para pantalla completa horizontal en móvil) -->
+        <!-- Controles: el movimiento lateral se hace inclinando el teléfono
+             (ver script.js → deviceorientation). Solo quedan dos botones de
+             disparo, uno en cada esquina inferior, fuera del centro de la
+             vista para no tapar la acción. -->
         <div class="arcade-game__controls" aria-hidden="true">
-          <div class="arcade-game__controls-move">
-            <button class="arcade-game__ctrl" id="arcadeLeft" type="button" aria-label="Mover a la izquierda">◀</button>
-            <button class="arcade-game__ctrl" id="arcadeRight" type="button" aria-label="Mover a la derecha">▶</button>
-          </div>
-          <button class="arcade-game__ctrl arcade-game__ctrl--shoot" id="arcadeShoot" type="button" aria-label="Disparar">●</button>
+          <button class="arcade-game__ctrl arcade-game__ctrl--shoot arcade-game__ctrl--shoot-left" id="arcadeShootLeft" type="button" aria-label="Disparar">●</button>
+          <button class="arcade-game__ctrl arcade-game__ctrl--shoot arcade-game__ctrl--shoot-right" id="arcadeShootRight" type="button" aria-label="Disparar">●</button>
         </div>
       </div>
     </div>
@@ -441,88 +454,113 @@
 </main>
 
 <!-- ============================================================
-     MODAL — PORTAL RA (puerta → salón)
-     Reutiliza el mecanismo puerta→salón ya construido: se abre desde
-     el botón "Probar RA" al final de la sección Experimenta la RA.
-     Cierre solo por botón X o tecla ESC (evita cierres accidentales
-     mientras el usuario interactúa con el portal).
+     MODAL 1 — TRACKING RA (tarjeta corporativa)
+     Se abre desde el botón "Probar RA" al final de la sección
+     Experimenta la RA. Comportamiento distinto por dispositivo
+     (ver script.js → initRaTrackingModal):
+
+     - ESCRITORIO: este modal se abre con dos pasos — Paso 1 muestra un
+       QR que el celular del cliente escanea (apunta a la página WebAR
+       real en ar/tarjeta-corporativa.html); Paso 2 muestra la imagen
+       que esa página va a reconocer con la cámara, para que el cliente
+       la deje en pantalla y apunte su celular hacia aquí.
+     - MÓVIL: este modal NUNCA se abre. El botón "Probar RA" redirige
+       directo a ar/tarjeta-corporativa.html, que activa la cámara del
+       propio teléfono.
+
+     Cierre solo por botón X, tecla ESC o el botón "Salir" (evita
+     cierres accidentales mientras el cliente escanea).
      ============================================================ -->
-<div class="portal-modal" id="portalModal" role="dialog" aria-modal="true" aria-label="Portal interactivo Reality Studio" hidden>
-  <div class="portal-modal__backdrop"></div>
-  <div class="portal-modal__panel">
-    <button class="portal-modal__close" id="portalModalClose" type="button" aria-label="Cerrar portal">✕</button>
+<div class="tracking-modal" id="raTrackingModal" role="dialog" aria-modal="true" aria-label="Prueba la Realidad Aumentada" hidden>
+  <div class="tracking-modal__backdrop"></div>
+  <div class="tracking-modal__panel">
+    <button class="tracking-modal__close" id="raTrackingClose" type="button" aria-label="Cerrar">✕</button>
 
-    <div class="portal-modal__bg">
-      <canvas class="portal-canvas" id="modalPortalCanvas" aria-hidden="true"></canvas>
-      <div class="portal-loader" id="modalPortalLoader" aria-hidden="true">
-        <p class="portal-loader__word" id="modalPortalLoaderWord">ABRIENDO</p>
+    <!-- PASO 1 — QR -->
+    <div class="tracking-stage" id="raTrackingStepQr">
+      <p class="eyebrow">Paso 1 de 2</p>
+      <h2 class="tracking-stage__title">Escanea con tu celular</h2>
+      <p class="tracking-stage__text">Abre la cámara de tu teléfono y apunta al código. Se abrirá la experiencia de Realidad Aumentada en tu navegador — no necesitas instalar nada.</p>
+      <div class="tracking-qr" id="raTrackingQr" aria-label="Código QR para abrir la experiencia de RA en tu celular">
+        <!-- 🔧 El <img> del QR se inserta por JS (script.js → initRaTrackingModal),
+             apuntando siempre a la URL absoluta de ar/tarjeta-corporativa.html -->
       </div>
-    </div>
-
-    <!-- ESTADO 1 — LA PUERTA -->
-    <div class="portal-stage" id="modalDoorStage">
-      <p class="eyebrow">Pruébalo tú mismo</p>
-      <h2 class="portal-stage__title">Cruza el portal</h2>
-
-      <button class="portal-frame" id="modalPortalFrame" type="button" aria-label="Cruzar el portal hacia el salón Reality Studio">
-        <svg class="portal-frame__arch" viewBox="0 0 220 300" aria-hidden="true">
-          <path class="portal-frame__stone" d="M14 296 V90 C14 34 55 6 110 6 C165 6 206 34 206 90 V296" />
-          <path class="portal-frame__rune" d="M30 296 V92 C30 44 62 22 110 22 C158 22 190 44 190 92 V296" />
-          <circle class="portal-frame__gem" cx="110" cy="34" r="5" />
-          <circle class="portal-frame__gem" cx="42" cy="150" r="3" />
-          <circle class="portal-frame__gem" cx="178" cy="150" r="3" />
-        </svg>
-        <div class="logo-orbit" id="modalLogoOrbit">
-          <div class="logo-3d" id="modalLogo3d">
-            <model-viewer
-              src="models/Logo Reality_Animado.glb"
-              alt="Modelo 3D Reality Studio"
-              camera-controls
-              auto-rotate
-              shadow-intensity="1"
-              exposure="1"
-              ar
-              loading="eager"
-              style="width:100%; height:100%;">
-            </model-viewer>
-          </div>
-        </div>
+      <button class="btn btn--solid tracking-stage__next" id="raTrackingToStep2" type="button">
+        <span>Ya escaneé → Paso 2</span>
       </button>
-
-      <p class="portal-hint">Toca o haz clic en el portal para entrar</p>
     </div>
 
-    <!-- ESTADO 2 — EL SALÓN -->
-    <div class="hall-stage" id="modalHallStage" hidden>
-      <p class="eyebrow">Bienvenido a Reality Studio</p>
-      <h2 class="hall-stage__title">El salón donde tus ideas cobran forma.</h2>
-      <div class="hall-pedestal">
-        <div class="hall-figure-slot" id="modalFigureSlot">
-
-          <model-viewer
-              src="models/Logo Reality_Animado.glb"
-              alt="Modelo 3D Reality Studio"
-              camera-controls
-              auto-rotate
-              shadow-intensity="1"
-              exposure="1"
-              ar
-              loading="eager"
-              style="width:100%; height:100%;">
-          </model-viewer>
-
+    <!-- PASO 2 — IMAGEN TRIGGER -->
+    <div class="tracking-stage" id="raTrackingStepImage" hidden>
+      <p class="eyebrow">Paso 2 de 2</p>
+      <h2 class="tracking-stage__title">Apunta tu celular aquí</h2>
+      <p class="tracking-stage__text">Deja esta imagen visible en tu pantalla y apunta la cámara de tu teléfono hacia ella. En segundos verá aparecer la experiencia sobre la tarjeta.</p>
+      <div class="tracking-trigger-frame">
+        <!-- 🔧 REEMPLAZAR: sube aquí la imagen real que MindAR reconoce.
+             Debe ser EXACTAMENTE la misma imagen usada para compilar
+             target_tarjeta_grab.mind (ver models/target_tarjeta_grab.mind). -->
+        <img src="img/PLACEHOLDER-imagen-trigger.png" alt="Imagen de tarjeta corporativa Reality Studio para activar la Realidad Aumentada" id="raTriggerImage">
       </div>
+      <div class="tracking-stage__actions">
+        <button class="btn tracking-stage__back" id="raTrackingBackToQr" type="button">← Volver</button>
+        <button class="btn btn--solid tracking-stage__next" id="raTrackingNextCard" type="button">
+          <span>Siguiente tarjeta →</span>
+        </button>
       </div>
-      <div class="hall-stage__actions">
-        <a class="btn btn--solid hall-cta-whatsapp" id="modalHallWhatsapp" href="https://wa.me/573173020116?text=Hola%20Reality%20Studio%2C%20quiero%20cotizar%20un%20proyecto" target="_blank">
-          <span>Quiero cotizar esta experiencia</span>
-        </a>
-        <button class="hall-back" id="modalHallBack" type="button">← Volver a la entrada</button>
-      </div>
+      <p class="tracking-stage__soon" id="raTrackingSoonNote" hidden>Estamos preparando más tarjetas de ejemplo. Esta es la primera de varias.</p>
     </div>
-
   </div>
 </div>
+
+<!-- ============================================================
+     MODAL 2 — "ASÍ SE VERÍA TU MARCA EN 3D"
+     Se abre desde #showcase3dBtn en la sección Software & Web.
+     Imagen de fondo a pantalla completa (la sube el cliente) + modelo
+     3D centrado (<model-viewer>) + partículas doradas circulares en
+     órbita (three-portal.js en modo showcase). Reemplaza por completo
+     al antiguo portal puerta→salón, ya retirado del sitio.
+     ============================================================ -->
+<div class="showcase3d-modal" id="showcase3dModal" role="dialog" aria-modal="true" aria-label="Así se vería tu marca en 3D" hidden>
+  <div class="showcase3d-modal__bg">
+    <!-- 🔧 REEMPLAZAR: sube aquí tu imagen de fondo (foto de evento, oficina,
+         vitrina, etc.) — debe cubrir toda la pantalla sin distorsionarse. -->
+    <img src="img/fondo_car_expo.jpg" alt="" id="showcase3dBgImage" aria-hidden="true">
+    <div class="showcase3d-modal__scrim"></div>
+    <canvas class="showcase3d-canvas" id="showcase3dCanvas" aria-hidden="true"></canvas>
+  </div>
+
+  <button class="showcase3d-modal__close" id="showcase3dClose" type="button" aria-label="Cerrar">✕</button>
+
+  <div class="showcase3d-modal__content">
+    <p class="eyebrow">Tu marca, en 3D</p>
+    <h2 class="showcase3d-modal__title">Así se vería tu marca flotando en cualquier espacio.</h2>
+    <div class="showcase3d-model">
+      <model-viewer
+        src="models/Logo Reality_Animado.glb"
+        alt="Modelo 3D Reality Studio"
+        camera-controls
+        auto-rotate
+        shadow-intensity="1"
+        exposure="1"
+        loading="eager"
+        style="width:100%; height:100%;">
+      </model-viewer>
+    </div>
+    <a class="btn btn--solid showcase3d-cta" id="showcase3dWhatsapp" href="https://wa.me/573173020116?text=Hola%20Reality%20Studio%2C%20quiero%20cotizar%20esta%20experiencia%20en%203D" target="_blank">
+      <span>Cotizar esta experiencia</span>
+    </a>
+  </div>
+</div>
+
+<!-- ============================================================
+     BOTÓN DE SONIDO — silencia/activa la pista de audio ambiental
+     que arranca en el primer toque de la página (ver script.js →
+     initAmbientAudio). Esquina inferior izquierda, para no chocar con
+     el CTA de WhatsApp que vive en la inferior derecha.
+     ============================================================ -->
+<button class="sound-toggle" id="soundToggle" type="button" aria-label="Silenciar sonido" aria-pressed="false">
+  <span class="sound-toggle__icon" id="soundToggleIcon" aria-hidden="true">🔊</span>
+</button>
 
 <!-- ============================================================
      BARRA DE PROGRESO — avance de lectura vertical de la página

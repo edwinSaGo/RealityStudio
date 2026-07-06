@@ -101,7 +101,7 @@
      NAVEGACIÓN
      ============================================================ -->
 <header class="nav" id="siteNav">
-  <img src="img/RealityStudioLogo.png" alt="Logo de reality Studio" style="width: 5%;">
+  <img src="img/RealityStudioLogo.png" alt="Logo de reality Studio" class="nav__brand-mark" style="width: 5%;">
   <a href="#top" class="nav__logo" aria-label="Reality Studio, inicio">REALITY<em>·</em>STUDIO</a>
   <nav class="nav__links" aria-label="Navegación principal">
     <a href="#enfoque" data-nav-link>Enfoque</a>
@@ -390,10 +390,10 @@
             <label for="fld-presupuesto">Presupuesto estimado</label>
             <select id="fld-presupuesto" name="presupuesto" required>
               <option value="" disabled selected>Selecciona un rango</option>
-              <option value="<10M">Menos de $10.000.000 COP</option>
-              <option value="10-30M">$10.000.000 – $30.000.000 COP</option>
-              <option value="30-80M">$30.000.000 – $80.000.000 COP</option>
-              <option value="80M+">Más de $80.000.000 COP</option>
+              <option value="<1M">Menos de $1.000.000 COP</option>
+              <option value="1-3M">$1.000.000 – $3.000.000 COP</option>
+              <option value="3-8M">$3.000.000 – $8.000.000 COP</option>
+              <option value="8M+">Más de $8.000.000 COP</option>
             </select>
           </div>
           <div class="field">
@@ -402,7 +402,7 @@
           </div>
           <button type="submit" class="lead-form__submit">Enviar solicitud</button>
           <p class="lead-form__status" id="formStatus" role="status" aria-live="polite"></p>
-          <p class="lead-form__note">🔧 Este formulario está listo para conectarse a Formspree, un webhook propio o Google Sheets. Ver INSTRUCCIONES.md.</p>
+        
         </form>
       </div>
     </section>
@@ -447,6 +447,7 @@
     </div>
     <div class="site-footer__bottom">
       <span>© <span id="year"></span> Reality Studio · realitystudio.lat</span>
+      <span>Obra musical: Cénit Digital-Música de https://www.fiftysounds.com/es/</span>
       <span>Experiencias Digitales Interactivas · Colombia → LatAm</span>
     </div>
   </footer>
@@ -507,7 +508,7 @@
           <span>Siguiente tarjeta →</span>
         </button>
       </div>
-      <p class="tracking-stage__soon" id="raTrackingSoonNote" hidden>Estamos preparando más tarjetas de ejemplo. Esta es la primera de varias.</p>
+      <p class="tracking-stage__soon" id="raTrackingSoonNote" hidden>Estamos preparando más tarjetas de muestra. Esta es la primera de varias.</p>
     </div>
   </div>
 </div>
@@ -524,7 +525,7 @@
   <div class="showcase3d-modal__bg">
     <!-- 🔧 REEMPLAZAR: sube aquí tu imagen de fondo (foto de evento, oficina,
          vitrina, etc.) — debe cubrir toda la pantalla sin distorsionarse. -->
-    <img src="img/fondo_car_expo.jpg" alt="" id="showcase3dBgImage" aria-hidden="true">
+    <img src="img/PLACEHOLDER-fondo-showcase-3d.jpg" alt="" id="showcase3dBgImage" aria-hidden="true">
     <div class="showcase3d-modal__scrim"></div>
     <canvas class="showcase3d-canvas" id="showcase3dCanvas" aria-hidden="true"></canvas>
   </div>

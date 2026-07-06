@@ -28,7 +28,7 @@
       shoot: null,   // ej. 'audio/shoot.mp3'
       hit: null,     // ej. 'audio/hit.mp3'
       gameOver: null,
-      music: null,   // ej. 'audio/ambiente.mp3' — pista de fondo del sitio, arranca en el primer toque (ver initAmbientAudio)
+      music: 'audio/Digital Zenith.mp3',   // ej. 'audio/ambiente.mp3' — pista de fondo del sitio, arranca en el primer toque (ver initAmbientAudio)
     },
 
     // Endpoint del formulario de leads. Ejemplos válidos:

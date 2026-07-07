@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>Tarjeta de Presentación con Realidad Aumentada | Reality Studio</title>
-<meta name="description" content="Prueba en vivo una tarjeta de presentación con Realidad Aumentada WebAR: apunta tu cámara y mira aparecer el modelo 3D, sin instalar ninguna app. Un servicio real de Reality Studio, Bogotá, Colombia.">
+<meta name="description" content="Prueba en vivo una tarjeta de presentación con Realidad Aumentada WebAR: apunta tu cámara y mira aparecer el logo 3D de Reality Studio, sin instalar ninguna app. Un servicio real de Reality Studio, Bogotá, Colombia.">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://realitystudio.lat/ar/tarjeta-corporativa.html">
 
@@ -49,7 +49,7 @@
 }
 </script>
 
-<!-- ============ MindAR + A-Frame (solo se cargan en esta página) ============ -->
+<!-- ============ MindAR + A-Frame (CDN — mismo patrón validado que el resto del sitio) ============ -->
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
@@ -243,6 +243,30 @@
     max-width: min(90vw, 380px);
   }
 
+  .ar-instructions[hidden]{ display: none; }
+
+  /* ---------------- CTA final — aparece solo cuando sale el logo 3D ---------------- */
+  #arCtaBottom{
+    position: fixed;
+    left: 50%;
+    bottom: 1.4rem;
+    transform: translateX(-50%) translateY(0);
+    z-index: 21;
+    opacity: 1;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+
+  #arCtaBottom[hidden]{
+    display: flex;
+    opacity: 0;
+    transform: translateX(-50%) translateY(12px);
+    pointer-events: none;
+  }
+
+  #arCtaBottom .btn{
+    box-shadow: 0 6px 0 rgba(0,0,0,0.35);
+  }
+
   @media (prefers-reduced-motion: reduce){
     *{ animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
   }
@@ -268,7 +292,7 @@
   <ol class="ar-intro__steps">
     <li>Toca "Iniciar cámara" y acepta el permiso de tu navegador.</li>
     <li>Apunta la cámara a la tarjeta corporativa de Reality Studio.</li>
-    <li>Espera unos segundos: el modelo 3D aparecerá flotando sobre la tarjeta.</li>
+    <li>Espera unos segundos: verás la tarjeta animarse y el logo 3D de Reality Studio aparecer flotando.</li>
   </ol>
   <button class="btn btn--solid" id="startArBtn" type="button">Iniciar cámara y ver la RA</button>
   <p class="ar-intro__note">Necesitamos acceso a tu cámara solo mientras usas esta página — no se graba ni se guarda nada.</p>
@@ -297,10 +321,15 @@
     </div>
   </div>
 
-  <p class="ar-instructions">Apunta la cámara a la tarjeta corporativa de Reality Studio</p>
+  <p class="ar-instructions" id="arInstructions">Apunta la cámara a la tarjeta corporativa de Reality Studio</p>
+
+  <!-- CTA final — oculto hasta que aparece el logo 3D (ver script abajo) -->
+  <a class="btn btn--solid" id="arCtaBottom" href="https://wa.me/573173020116?text=Hola%20Reality%20Studio%2C%20quiero%20cotizar%20mi%20tarjeta%20con%20Realidad%20Aumentada" target="_blank" rel="noopener" hidden>
+    ¿Te gustó? Cotiza tu tarjeta
+  </a>
 
   <a-scene id="arScene"
-           mindar-image="imageTargetSrc: ../models/target_tarjeta_grab.mind;
+           mindar-image="imageTargetSrc: ../targets/RealityStudio_logo.mind;
                          filterMinCF: 0.0001;
                          filterBeta: 0.01;
                          missTolerance: 5"
@@ -310,19 +339,26 @@
            device-orientation-permission-ui="enabled: false"
            embedded>
     <a-assets>
-      <!-- 🔧 REEMPLAZAR: imagen de la tarjeta que se dibuja sobre el
-           target reconocido (debe ser la misma usada para compilar
-           target_tarjeta_grab.mind). -->
-      <img id="card" src="../img/PLACEHOLDER-imagen-trigger.png" />
-      <a-asset-item id="rsModel" src="../models/Logo Reality_Animado.glb"></a-asset-item>
+      <img id="card1" src="../img/tarjeta_01.png" />
+      <img id="card2" src="../img/tarjeta_02.png" />
+      <a-asset-item id="rsModel" src="../models/Logo-Reality-Animado.glb"></a-asset-item>
     </a-assets>
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-    <a-entity mindar-image-target="targetIndex: 0">
-      <a-plane src="#card" position="0 0 0" height="0.552" width="1"
-               rotation="0 0 0" scale="0.001 0.001 0.001"></a-plane>
-      <a-gltf-model rotation="0 90 0" position="0 -0.2 0.8" scale="0.6 0.6 0.6"
-                    src="#rsModel"
-                    animation="property: position; to: 0 -0.5 0.8; dur: 1000;
+
+    <a-entity id="arTarget" mindar-image-target="targetIndex: 0">
+      <!-- Paso 1 — primera imagen de la tarjeta (visible al reconocer el target) -->
+      <a-plane id="stepCard1" src="#card1" position="0 0 0.3" height="0.552" width="1"
+               rotation="0 0 0" scale="1 1 1" visible="false"></a-plane>
+
+      <!-- Paso 2 — segunda imagen de la tarjeta -->
+      <a-plane id="stepCard2" src="#card2" position="0 0 0.3" height="0.552" width="1"
+               rotation="0 0 0" scale="1 1 1" visible="false"></a-plane>
+
+      <!-- Paso 3 — logo 3D de Reality Studio, se queda visible mientras el
+           target siga en cámara -->
+      <a-gltf-model id="stepModel" rotation="0 0 0" position="0 0 0" scale="0.2 0.2 0.2"
+                    src="#rsModel" visible="false"
+                    animation="property: position; to: 0 -0.3 0; dur: 700;
                                easing: easeInOutQuad; loop: true; dir: alternate">
       </a-gltf-model>
     </a-entity>
@@ -337,15 +373,66 @@
     const startBtn = document.getElementById('startArBtn');
     const menuToggle = document.getElementById('menu-toggle');
     const menuOptions = document.getElementById('menu-options');
+    const instructions = document.getElementById('arInstructions');
+    const ctaBottom = document.getElementById('arCtaBottom');
+    const target = document.getElementById('arTarget');
+    const stepCard1 = document.getElementById('stepCard1');
+    const stepCard2 = document.getElementById('stepCard2');
+    const stepModel = document.getElementById('stepModel');
 
+    // ---------------- Intro → escena AR ----------------
     startBtn.addEventListener('click', () => {
       intro.hidden = true;
       sceneWrap.hidden = false;
     });
 
+    // ---------------- Menú flotante ----------------
     menuToggle.addEventListener('click', () => {
       menuOptions.classList.toggle('hidden');
     });
+
+    // ---------------- Secuencia: imagen 1 → imagen 2 → logo 3D + CTA ----------------
+    // 3 segundos por imagen. El logo 3D se queda visible hasta que se
+    // pierda el tracking del target (targetLost). Si el usuario pierde
+    // y recupera el target, la secuencia arranca de nuevo desde el
+    // principio (comportamiento "reset" confirmado).
+    const STEP_DURATION_MS = 3000;
+    let sequenceTimers = [];
+
+    function clearSequenceTimers() {
+      sequenceTimers.forEach((id) => window.clearTimeout(id));
+      sequenceTimers = [];
+    }
+
+    function setStepVisible(step) {
+      stepCard1.setAttribute('visible', step === 'card1');
+      stepCard2.setAttribute('visible', step === 'card2');
+      stepModel.setAttribute('visible', step === 'model');
+      ctaBottom.hidden = step !== 'model';
+    }
+
+    function startSequence() {
+      clearSequenceTimers();
+      setStepVisible('card1');
+      if (instructions) instructions.hidden = true;
+
+      sequenceTimers.push(window.setTimeout(() => {
+        setStepVisible('card2');
+      }, STEP_DURATION_MS));
+
+      sequenceTimers.push(window.setTimeout(() => {
+        setStepVisible('model');
+      }, STEP_DURATION_MS * 2));
+    }
+
+    function resetSequence() {
+      clearSequenceTimers();
+      setStepVisible(null);
+      if (instructions) instructions.hidden = false;
+    }
+
+    target.addEventListener('targetFound', startSequence);
+    target.addEventListener('targetLost', resetSequence);
   })();
 </script>
 

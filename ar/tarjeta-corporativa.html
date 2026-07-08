@@ -332,7 +332,8 @@
            mindar-image="imageTargetSrc: ../targets/RealityStudio_logo.mind;
                          filterMinCF: 0.0001;
                          filterBeta: 0.01;
-                         missTolerance: 5"
+                         missTolerance: 5;
+                         uiScanning: no"
            color-space="sRGB"
            renderer="colorManagement: true, physicallyCorrectLights"
            vr-mode-ui="enabled: false"
@@ -350,17 +351,17 @@
     <a-entity id="arTarget" mindar-image-target="targetIndex: 0">
       <!-- Paso 1 — primera imagen de la tarjeta (visible al reconocer el target) -->
       <a-plane id="stepCard1" src="#card1" position="0 0 0" height="0.552" width="1"
-               rotation="0 0 0" scale="1 1 1" visible="false"></a-plane>
+               rotation="0 0 0" scale="1.2 1.2 1.2" visible="false"></a-plane>
 
       <!-- Paso 2 — segunda imagen de la tarjeta -->
       <a-plane id="stepCard2" src="#card2" position="0 0 0" height="0.552" width="1"
-               rotation="0 0 0" scale="1 1 1" visible="false"></a-plane>
+               rotation="0 0 0" scale="1.2 1.2 1.2" visible="false"></a-plane>
 
       <!-- Paso 3 — logo 3D de Reality Studio, se queda visible mientras el
            target siga en cámara -->
       <a-gltf-model id="stepModel" rotation="0 0 0" position="0 0 0" scale="0.4 0.4 0.4"
                     src="#rsModel" visible="false"
-                    animation="property: position; to: 0 0.5 0; dur: 700;
+                    animation="property: position; to: 0 -0.5 0; dur: 700;
                                easing: easeInOutQuad; loop: true; dir: alternate">
       </a-gltf-model>
     </a-entity>
@@ -399,6 +400,8 @@
     // y recupera el target, la secuencia arranca de nuevo desde el
     // principio (comportamiento "reset" confirmado).
     const STEP_DURATION_MS = 3000;
+    const STEP_DURATION_MS_SHORT = 1500;
+    const STEP_DURATION_MS_LONG = 4000;
     let sequenceTimers = [];
 
     function clearSequenceTimers() {
@@ -420,11 +423,11 @@
 
       sequenceTimers.push(window.setTimeout(() => {
         setStepVisible('card2');
-      }, STEP_DURATION_MS));
+      }, STEP_DURATION_MS_LONG));
 
       sequenceTimers.push(window.setTimeout(() => {
         setStepVisible('model');
-      }, STEP_DURATION_MS * 2));
+      }, STEP_DURATION_MS_LONG * 2));
     }
 
     function resetSequence() {

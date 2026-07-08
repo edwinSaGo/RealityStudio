@@ -332,11 +332,7 @@
            mindar-image="imageTargetSrc: ../targets/RealityStudio_logo.mind;
                          filterMinCF: 0.0001;
                          filterBeta: 0.01;
-                         missTolerance: 5;
-                         autoStart: false;
-                         uiLoading: no;
-                         uiScanning: no;
-                         uiError: no"
+                         missTolerance: 5"
            color-space="sRGB"
            renderer="colorManagement: true, physicallyCorrectLights"
            vr-mode-ui="enabled: false"
@@ -347,6 +343,8 @@
       <img id="card2" src="../img/tarjeta_02.png" />
       <a-asset-item id="rsModel" src="../models/Logo-Reality-Animado.glb"></a-asset-item>
     </a-assets>
+    <a-light type="ambient" color="#ffffff" intensity="0.9"></a-light>
+    <a-light type="directional" color="#ffffff" intensity="0.6" position="0 1 1"></a-light>
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     <a-entity id="arTarget" mindar-image-target="targetIndex: 0">
@@ -360,9 +358,9 @@
 
       <!-- Paso 3 — logo 3D de Reality Studio, se queda visible mientras el
            target siga en cámara -->
-      <a-gltf-model id="stepModel" rotation="0 90 0" position="0 -0.2 0.8" scale="0.6 0.6 0.6"
+      <a-gltf-model id="stepModel" rotation="0 0 0" position="0 0 0" scale="0.4 0.4 0.4"
                     src="#rsModel" visible="false"
-                    animation="property: position; to: 0 -0.5 0.8; dur: 1000;
+                    animation="property: position; to: 0 0.5 0; dur: 700;
                                easing: easeInOutQuad; loop: true; dir: alternate">
       </a-gltf-model>
     </a-entity>
@@ -385,27 +383,9 @@
     const stepModel = document.getElementById('stepModel');
 
     // ---------------- Intro → escena AR ----------------
-    // El sistema mindar-image arranca con autoStart:false (ver <a-scene>)
-    // precisamente para que la petición de cámara ocurra AQUÍ, dentro del
-    // mismo gesto de clic del usuario — varios navegadores móviles (sobre
-    // todo iOS Safari) bloquean getUserMedia si se pide fuera de un gesto
-    // directo, y antes se estaba pidiendo sola al cargar la página.
-    const sceneEl = document.getElementById('arScene');
-
-    function startMindAR() {
-      const system = sceneEl.systems['mindar-image-system'];
-      if (system) system.start();
-    }
-
     startBtn.addEventListener('click', () => {
       intro.hidden = true;
       sceneWrap.hidden = false;
-
-      if (sceneEl.hasLoaded) {
-        startMindAR();
-      } else {
-        sceneEl.addEventListener('loaded', startMindAR, { once: true });
-      }
     });
 
     // ---------------- Menú flotante ----------------

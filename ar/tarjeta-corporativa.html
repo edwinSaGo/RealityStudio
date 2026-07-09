@@ -21,12 +21,14 @@
 <link rel="icon" type="image/svg+xml" href="../img/favicon.png">
 <link rel="alternate icon" href="../img/favicon.png">
 
+<!-- ============ Tipografía de marca (misma familia que el sitio principal) ============ -->
 <link rel="preconnect" href="https://api.fontshare.com" crossorigin>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@700,600&f[]=general-sans@400,500,600&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap">
 
+<!-- ============ Schema.org — Service, referenciado al ProfessionalService principal ============ -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -47,10 +49,16 @@
 }
 </script>
 
+<!-- ============ MindAR + A-Frame (CDN — mismo patrón validado que el resto del sitio) ============ -->
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
 <style>
+  /* -------------------------------------------------------------------
+     Página autónoma y liviana: no depende de style.css del sitio
+     principal (esa hoja carga estilos que esta página no usa). Reusa
+     los mismos tokens de marca para mantener coherencia visual.
+     ------------------------------------------------------------------- */
   :root{
     --turquesa: #23CED9;
     --jade: #097C87;
@@ -88,12 +96,6 @@
     gap: 0.6em;
   }
 
-
-  .mindar-ui-scanning {
-    transform: scale(0.7);
-  }
-
-
   h1, h2{
     font-family: var(--font-display);
     text-transform: uppercase;
@@ -124,6 +126,7 @@
   .btn--ghost{ opacity: 0.55; cursor: default; }
   .btn--ghost:hover{ transform: none; }
 
+  /* ---------------- Introducción (contenido real para SEO) ---------------- */
   .ar-intro{
     min-height: 100svh;
     display: flex;
@@ -171,17 +174,24 @@
     text-decoration: none;
   }
 
+  /* ---------------- Escena AR ---------------- */
   #arSceneWrap{
     position: fixed;
     inset: 0;
     z-index: 10;
     background: var(--space-deep);
+    visibility: hidden;
+    pointer-events: none;
   }
 
-  #arSceneWrap[hidden]{ display: none; }
+  #arSceneWrap.is-active{
+    visibility: visible;
+    pointer-events: auto;
+  }
 
   a-scene{ width: 100%; height: 100%; }
 
+  /* Menú flotante sobre la vista de cámara */
   #menu-container{
     position: fixed;
     top: 1rem;
@@ -240,6 +250,7 @@
 
   .ar-instructions[hidden]{ display: none; }
 
+  /* ---------------- CTA final — aparece solo cuando sale el logo 3D ---------------- */
   #arCtaBottom{
     position: fixed;
     left: 50%;
@@ -268,6 +279,11 @@
 </head>
 <body>
 
+<!-- ============================================================
+     INTRODUCCIÓN — contenido real de servicio (SEO), visible antes
+     de pedir permiso de cámara. Al tocar "Iniciar cámara" se muestra
+     la escena AR y se activa la cámara del teléfono.
+     ============================================================ -->
 <main class="ar-intro" id="arIntro">
   <a class="ar-intro__back" href="../index.html">← Volver a Reality Studio</a>
   <p class="eyebrow">Realidad Aumentada · Demo real</p>
@@ -287,12 +303,19 @@
   <p class="ar-intro__note">Necesitamos acceso a tu cámara solo mientras usas esta página — no se graba ni se guarda nada.</p>
 </main>
 
-<div id="arSceneWrap" hidden>
+<!-- ============================================================
+     ESCENA AR — se muestra solo después de "Iniciar cámara"
+     ============================================================ -->
+<div id="arSceneWrap">
 
+  <!-- Menú flotante -->
   <div id="menu-container">
     <button id="menu-toggle" type="button">☰ Menú</button>
     <div id="menu-options" class="hidden">
       <a class="btn" href="../index.html">🏠 Volver al home</a>
+      <!-- 🔧 "Otras tarjetas": hoy solo existe esta experiencia real.
+           Cuando compiles el .mind de una segunda tarjeta, reemplaza estos
+           dos botones por enlaces reales a sus páginas WebAR. -->
       <button class="btn btn--ghost" type="button" disabled>🃏 Otra tarjeta — próximamente</button>
       <button class="btn btn--ghost" type="button" disabled>🃏 Otra tarjeta — próximamente</button>
       <a class="btn btn--whatsapp"
@@ -305,6 +328,7 @@
 
   <p class="ar-instructions" id="arInstructions">Apunta la cámara a la tarjeta corporativa de Reality Studio</p>
 
+  <!-- CTA final — oculto hasta que aparece el logo 3D (ver script abajo) -->
   <a class="btn btn--solid" id="arCtaBottom" href="https://wa.me/573173020116?text=Hola%20Reality%20Studio%2C%20quiero%20cotizar%20mi%20tarjeta%20con%20Realidad%20Aumentada" target="_blank" rel="noopener" hidden>
     ¿Te gustó? Cotiza tu tarjeta
   </a>
@@ -313,7 +337,8 @@
            mindar-image="imageTargetSrc: ../targets/RealityStudio_logo.mind;
                          filterMinCF: 0.0001;
                          filterBeta: 0.01;
-                         missTolerance: 5"
+                         missTolerance: 5;
+                         uiScanning: no"
            color-space="sRGB"
            renderer="colorManagement: true, physicallyCorrectLights"
            vr-mode-ui="enabled: false"
@@ -329,12 +354,16 @@
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     <a-entity id="arTarget" mindar-image-target="targetIndex: 0">
+      <!-- Paso 1 — primera imagen de la tarjeta (visible al reconocer el target) -->
       <a-plane id="stepCard1" src="#card1" position="0 0 0" height="0.552" width="1"
                rotation="0 0 0" scale="1.2 1.2 1.2" visible="false"></a-plane>
 
+      <!-- Paso 2 — segunda imagen de la tarjeta -->
       <a-plane id="stepCard2" src="#card2" position="0 0 0" height="0.552" width="1"
                rotation="0 0 0" scale="1.2 1.2 1.2" visible="false"></a-plane>
 
+      <!-- Paso 3 — logo 3D de Reality Studio, se queda visible mientras el
+           target siga en cámara -->
       <a-gltf-model id="stepModel" rotation="0 0 0" position="0 0 0" scale="0.4 0.4 0.4"
                     src="#rsModel" visible="false"
                     animation="property: position; to: 0 -0.5 0; dur: 700;
@@ -359,15 +388,22 @@
     const stepCard2 = document.getElementById('stepCard2');
     const stepModel = document.getElementById('stepModel');
 
+    // ---------------- Intro → escena AR ----------------
     startBtn.addEventListener('click', () => {
       intro.hidden = true;
-      sceneWrap.hidden = false;
+      sceneWrap.classList.add('is-active');
     });
 
+    // ---------------- Menú flotante ----------------
     menuToggle.addEventListener('click', () => {
       menuOptions.classList.toggle('hidden');
     });
 
+    // ---------------- Secuencia: imagen 1 → imagen 2 → logo 3D + CTA ----------------
+    // 3 segundos por imagen. El logo 3D se queda visible hasta que se
+    // pierda el tracking del target (targetLost). Si el usuario pierde
+    // y recupera el target, la secuencia arranca de nuevo desde el
+    // principio (comportamiento "reset" confirmado).
     const STEP_DURATION_MS = 3000;
     let sequenceTimers = [];
 

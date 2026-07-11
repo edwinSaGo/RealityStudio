@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>Tarjeta de Presentación con Realidad Aumentada | Reality Studio</title>
-<meta name="description" content="Prueba en vivo una tarjeta de presentación con Realidad Aumentada WebAR: apunta tu cámara y mira aparecer el logo 3D de Reality Studio, sin instalar ninguna app. Un servicio real de Reality Studio, Bogotá, Colombia.">
+<meta name="description" content="Prueba en vivo nuestras experiencias de Realidad Aumentada WebAR: apunta tu cámara a cualquiera de nuestras tarjetas de demostración y mira aparecer modelos 3D interactivos, sin instalar ninguna app. Un servicio real de Reality Studio, Bogotá, Colombia.">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://realitystudio.lat/ar/tarjeta-corporativa.html">
 
@@ -287,7 +287,7 @@
 <main class="ar-intro" id="arIntro">
   <a class="ar-intro__back" href="../index.html">← Volver a Reality Studio</a>
   <p class="eyebrow">Realidad Aumentada · Demo real</p>
-  <h1>Tu tarjeta de presentación, viva en la cámara de tu cliente.</h1>
+  <h1>Tu marca, viva en la cámara de tu cliente.</h1>
   <p>
     Esta es una demostración real de Realidad Aumentada WebAR hecha por Reality Studio en Bogotá, Colombia.
     Convertimos objetos físicos de tu marca — tarjetas de presentación, empaques, textil, mobiliario de evento —
@@ -296,8 +296,8 @@
   </p>
   <ol class="ar-intro__steps">
     <li>Toca "Iniciar cámara" y acepta el permiso de tu navegador.</li>
-    <li>Apunta la cámara a la tarjeta corporativa de Reality Studio.</li>
-    <li>Espera unos segundos: verás la tarjeta animarse y el logo 3D de Reality Studio aparecer flotando.</li>
+    <li>Apunta la cámara a cualquiera de nuestras tarjetas de demostración.</li>
+    <li>Espera unos segundos: verás la tarjeta animarse y modelos 3D de Reality Studio aparecer flotando.</li>
   </ol>
   <button class="btn btn--solid" id="startArBtn" type="button">Iniciar cámara y ver la RA</button>
   <p class="ar-intro__note">Necesitamos acceso a tu cámara solo mientras usas esta página — no se graba ni se guarda nada.</p>
@@ -326,7 +326,7 @@
     </div>
   </div>
 
-  <p class="ar-instructions" id="arInstructions">Apunta la cámara a la tarjeta corporativa de Reality Studio</p>
+  <p class="ar-instructions" id="arInstructions">Apunta la cámara a cualquiera de nuestras tarjetas de demostración</p>
 
   <!-- CTA final — oculto hasta que aparece el logo 3D (ver script abajo) -->
   <a class="btn btn--solid" id="arCtaBottom" href="https://wa.me/573173020116?text=Hola%20Reality%20Studio%2C%20quiero%20cotizar%20mi%20tarjeta%20con%20Realidad%20Aumentada" target="_blank" rel="noopener" hidden>
@@ -334,7 +334,7 @@
   </a>
 
   <a-scene id="arScene"
-           mindar-image="imageTargetSrc: ../targets/RealityStudio_logo.mind;
+           mindar-image="imageTargetSrc: ../targets/tres-en-uno.mind;
                          filterMinCF: 0.0001;
                          filterBeta: 0.01;
                          missTolerance: 5;
@@ -345,28 +345,83 @@
            device-orientation-permission-ui="enabled: false"
            embedded>
     <a-assets>
+      <!-- ---- Track 0 — Tarjeta corporativa (targetIndex: 0) ---- -->
       <img id="card1" src="../img/tarjeta_01.png" />
       <img id="card2" src="../img/tarjeta_02.png" />
       <a-asset-item id="rsModel" src="../models/Logo-Reality-Animado.glb"></a-asset-item>
+
+      <!-- ---- Track 1 — Constructora (targetIndex: 1) ----
+           🔧 PLACEHOLDER: mientras subes los archivos reales, estos 2
+           modelos apuntan al mismo .glb que ya existe (Logo-Reality-Animado)
+           solo para poder probar la secuencia completa de 2 modelos sin 404.
+           Cuando tengas los archivos reales, cambia ÚNICAMENTE el atributo
+           src de cada línea de abajo:
+             - planoModel     → ../models/plano.glb
+             - logoConstructoraModel → ../models/contructora_logo.glb
+           (respeta el nombre exacto que ya usaste al subir el archivo,
+           incluida la falta de "s" en "contructora_logo" si así lo subiste). -->
+      <a-asset-item id="planoModel" src="../models/Logo-Reality-Animado.glb"></a-asset-item>
+      <a-asset-item id="logoConstructoraModel" src="../models/Logo-Reality-Animado.glb"></a-asset-item>
+
+      <!-- ---- Track 2 — Concesionario (targetIndex: 2) ----
+           🔧 PLACEHOLDER: mismo caso que arriba. Cuando tengas los archivos
+           reales, cambia ÚNICAMENTE el atributo src de cada línea:
+             - concesionarioModel     → ../models/concesionario.glb
+             - logoConcesionarioModel → ../models/concesionario_logo.glb -->
+      <a-asset-item id="concesionarioModel" src="../models/Logo-Reality-Animado.glb"></a-asset-item>
+      <a-asset-item id="logoConcesionarioModel" src="../models/Logo-Reality-Animado.glb"></a-asset-item>
     </a-assets>
     <a-light type="ambient" color="#ffffff" intensity="0.9"></a-light>
     <a-light type="directional" color="#ffffff" intensity="0.6" position="0 1 1"></a-light>
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <a-entity id="arTarget" mindar-image-target="targetIndex: 0">
+    <!-- ================= TRACK 0 — Tarjeta corporativa ================= -->
+    <a-entity id="arTarget0" mindar-image-target="targetIndex: 0">
       <!-- Paso 1 — primera imagen de la tarjeta (visible al reconocer el target) -->
       <a-plane id="stepCard1" src="#card1" position="0 0 0" height="0.552" width="1"
-               rotation="0 0 0" scale="1.2 1.2 1.2" visible="false"></a-plane>
+               rotation="0 0 0" scale="1 1 1" visible="false"></a-plane>
 
       <!-- Paso 2 — segunda imagen de la tarjeta -->
       <a-plane id="stepCard2" src="#card2" position="0 0 0" height="0.552" width="1"
-               rotation="0 0 0" scale="1.2 1.2 1.2" visible="false"></a-plane>
+               rotation="0 0 0" scale="1 1 1" visible="false"></a-plane>
 
       <!-- Paso 3 — logo 3D de Reality Studio, se queda visible mientras el
            target siga en cámara -->
-      <a-gltf-model id="stepModel" rotation="0 0 0" position="0 0 0" scale="0.4 0.4 0.4"
+      <a-gltf-model id="stepModel0" rotation="0 0 0" position="0 0 0" scale="0.3 0.3 0.3"
                     src="#rsModel" visible="false"
-                    animation="property: position; to: 0 -0.5 0; dur: 700;
+                    animation="property: position; to: 0 -0.2 0; dur: 700;
+                               easing: easeInOutQuad; loop: true; dir: alternate">
+      </a-gltf-model>
+    </a-entity>
+
+    <!-- ================= TRACK 1 — Constructora ================= -->
+    <a-entity id="arTarget1" mindar-image-target="targetIndex: 1">
+      <!-- Paso 1 — primer modelo (plano.glb, cuando esté subido) -->
+      <a-gltf-model id="stepPlano" rotation="0 0 0" position="0 -0.2 0.8" scale="0.6 0.6 0.6"
+                    src="#planoModel" visible="false">
+      </a-gltf-model>
+
+      <!-- Paso 2 — segundo modelo (logo de constructora), se queda visible
+           mientras el target siga en cámara -->
+      <a-gltf-model id="stepLogoConstructora" rotation="0 0 0" position="0 -0.2 0.8" scale="0.6 0.6 0.6"
+                    src="#logoConstructoraModel" visible="false"
+                    animation="property: position; to: 0 -0.5 0.8; dur: 1000;
+                               easing: easeInOutQuad; loop: true; dir: alternate">
+      </a-gltf-model>
+    </a-entity>
+
+    <!-- ================= TRACK 2 — Concesionario ================= -->
+    <a-entity id="arTarget2" mindar-image-target="targetIndex: 2">
+      <!-- Paso 1 — primer modelo (concesionario.glb, cuando esté subido) -->
+      <a-gltf-model id="stepConcesionario" rotation="0 0 0" position="0 -0.2 0.8" scale="0.6 0.6 0.6"
+                    src="#concesionarioModel" visible="false">
+      </a-gltf-model>
+
+      <!-- Paso 2 — segundo modelo (logo de concesionario), se queda visible
+           mientras el target siga en cámara -->
+      <a-gltf-model id="stepLogoConcesionario" rotation="0 0 0" position="0 -0.2 0.8" scale="0.6 0.6 0.6"
+                    src="#logoConcesionarioModel" visible="false"
+                    animation="property: position; to: 0 -0.5 0.8; dur: 1000;
                                easing: easeInOutQuad; loop: true; dir: alternate">
       </a-gltf-model>
     </a-entity>
@@ -383,10 +438,18 @@
     const menuOptions = document.getElementById('menu-options');
     const instructions = document.getElementById('arInstructions');
     const ctaBottom = document.getElementById('arCtaBottom');
-    const target = document.getElementById('arTarget');
+    const target0 = document.getElementById('arTarget0');
     const stepCard1 = document.getElementById('stepCard1');
     const stepCard2 = document.getElementById('stepCard2');
-    const stepModel = document.getElementById('stepModel');
+    const stepModel0 = document.getElementById('stepModel0');
+
+    const target1 = document.getElementById('arTarget1');
+    const stepPlano = document.getElementById('stepPlano');
+    const stepLogoConstructora = document.getElementById('stepLogoConstructora');
+
+    const target2 = document.getElementById('arTarget2');
+    const stepConcesionario = document.getElementById('stepConcesionario');
+    const stepLogoConcesionario = document.getElementById('stepLogoConcesionario');
 
     // ---------------- Intro → escena AR ----------------
     startBtn.addEventListener('click', () => {
@@ -399,48 +462,67 @@
       menuOptions.classList.toggle('hidden');
     });
 
-    // ---------------- Secuencia: imagen 1 → imagen 2 → logo 3D + CTA ----------------
-    // 3 segundos por imagen. El logo 3D se queda visible hasta que se
-    // pierda el tracking del target (targetLost). Si el usuario pierde
-    // y recupera el target, la secuencia arranca de nuevo desde el
-    // principio (comportamiento "reset" confirmado).
+    // ---------------- Secuencia genérica, reutilizada por los 3 tracks ----------------
+    // Cada track pasa su propia lista de pasos (elementos <a-*> a mostrar en
+    // orden) y el tiempo que dura cada uno ANTES de pasar al siguiente. El
+    // último paso de la lista se queda visible indefinidamente (hasta perder
+    // el tracking) y dispara el CTA compartido — igual que el comportamiento
+    // ya validado del track de la tarjeta corporativa.
+    // 🔧 Para ajustar cuánto dura cada paso, edita STEP_DURATION_MS — aplica
+    // por igual a los 3 tracks.
     const STEP_DURATION_MS = 3000;
-    let sequenceTimers = [];
 
-    function clearSequenceTimers() {
-      sequenceTimers.forEach((id) => window.clearTimeout(id));
-      sequenceTimers = [];
+    function createTrackSequence(target, steps) {
+      let timers = [];
+
+      function clearTimers() {
+        timers.forEach((id) => window.clearTimeout(id));
+        timers = [];
+      }
+
+      function showOnly(activeEl) {
+        steps.forEach((el) => el.setAttribute('visible', el === activeEl));
+      }
+
+      function hideAll() {
+        steps.forEach((el) => el.setAttribute('visible', false));
+      }
+
+      function start() {
+        clearTimers();
+        showOnly(steps[0]);
+        if (instructions) instructions.hidden = true;
+        if (ctaBottom) ctaBottom.hidden = true;
+
+        for (let i = 1; i < steps.length; i += 1) {
+          const isLast = i === steps.length - 1;
+          const id = window.setTimeout(() => {
+            showOnly(steps[i]);
+            if (isLast && ctaBottom) ctaBottom.hidden = false;
+          }, STEP_DURATION_MS * i);
+          timers.push(id);
+        }
+      }
+
+      function reset() {
+        clearTimers();
+        hideAll();
+        if (ctaBottom) ctaBottom.hidden = true;
+        if (instructions) instructions.hidden = false;
+      }
+
+      target.addEventListener('targetFound', start);
+      target.addEventListener('targetLost', reset);
     }
 
-    function setStepVisible(step) {
-      stepCard1.setAttribute('visible', step === 'card1');
-      stepCard2.setAttribute('visible', step === 'card2');
-      stepModel.setAttribute('visible', step === 'model');
-      ctaBottom.hidden = step !== 'model';
-    }
+    // Track 0 — Tarjeta corporativa: imagen 1 → imagen 2 → logo 3D
+    createTrackSequence(target0, [stepCard1, stepCard2, stepModel0]);
 
-    function startSequence() {
-      clearSequenceTimers();
-      setStepVisible('card1');
-      if (instructions) instructions.hidden = true;
+    // Track 1 — Constructora: modelo "plano" → logo de constructora
+    createTrackSequence(target1, [stepPlano, stepLogoConstructora]);
 
-      sequenceTimers.push(window.setTimeout(() => {
-        setStepVisible('card2');
-      }, STEP_DURATION_MS));
-
-      sequenceTimers.push(window.setTimeout(() => {
-        setStepVisible('model');
-      }, STEP_DURATION_MS * 2));
-    }
-
-    function resetSequence() {
-      clearSequenceTimers();
-      setStepVisible(null);
-      if (instructions) instructions.hidden = false;
-    }
-
-    target.addEventListener('targetFound', startSequence);
-    target.addEventListener('targetLost', resetSequence);
+    // Track 2 — Concesionario: modelo "concesionario" → logo de concesionario
+    createTrackSequence(target2, [stepConcesionario, stepLogoConcesionario]);
   })();
 </script>
 

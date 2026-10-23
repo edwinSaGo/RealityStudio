@@ -18,7 +18,7 @@
 <meta property="og:image" content="https://realitystudio.lat/assets/img/og-cover.jpg">
 <meta name="twitter:card" content="summary_large_image">
 
-<link rel="icon" type="image/svg+xml" href="../img/favicon.png">
+<link rel="icon" type="image/png" href="../img/favicon.png">
 <link rel="alternate icon" href="../img/favicon.png">
 
 <!-- ============ Tipografía de marca (misma familia que el sitio principal) ============ -->
@@ -56,8 +56,7 @@
 <style>
   /* -------------------------------------------------------------------
      Página autónoma y liviana: no depende de style.css del sitio
-     principal (esa hoja carga estilos que esta página no usa). Reusa
-     los mismos tokens de marca para mantener coherencia visual.
+     principal. Reusa los mismos tokens de marca para mantener coherencia.
      ------------------------------------------------------------------- */
   :root{
     --turquesa: #23CED9;
@@ -68,6 +67,13 @@
     --ink: #06211F;
     --paper: #F6F1E7;
     --space-deep: #050A10;
+
+    --glass: rgba(5, 14, 18, 0.62);
+    --glass-border: rgba(35, 206, 217, 0.38);
+    --glow: 0 0 24px rgba(35, 206, 217, 0.28);
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+
     --font-display: 'Clash Display', 'Arial Black', sans-serif;
     --font-body: 'General Sans', 'Helvetica Neue', Arial, sans-serif;
     --font-mono: 'Space Mono', 'Courier New', monospace;
@@ -77,7 +83,10 @@
 
   html, body{
     margin: 0;
-    background: var(--space-deep);
+    background:
+      radial-gradient(1100px 560px at 85% -10%, rgba(35, 206, 217, 0.14), transparent 60%),
+      radial-gradient(900px 520px at -10% 110%, rgba(9, 124, 135, 0.24), transparent 55%),
+      var(--space-deep);
     color: var(--paper);
     font-family: var(--font-body);
     overflow-x: hidden;
@@ -103,28 +112,55 @@
     margin: 0;
   }
 
+  /* ---------------- Botones ---------------- */
   .btn{
-    font-family: var(--font-mono);
-    font-size: 0.82rem;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    padding: 0.9em 1.6em;
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.95rem;
+    letter-spacing: 0.01em;
+    padding: 0.95em 1.5em;
     border-radius: 999px;
-    border: 1.5px solid currentColor;
+    border: 1.5px solid rgba(246, 241, 231, 0.4);
     background: transparent;
     color: var(--paper);
     display: inline-flex;
     align-items: center;
-    gap: 0.5em;
+    justify-content: center;
+    gap: 0.55em;
     cursor: pointer;
     text-decoration: none;
-    transition: transform 0.2s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
   }
   .btn:hover{ transform: translateY(-2px); }
-  .btn--solid{ background: var(--amarillo); color: var(--ink); border-color: var(--amarillo); }
-  .btn--whatsapp{ background: #25D366; color: #06210f; border-color: #25D366; }
-  .btn--ghost{ opacity: 0.55; cursor: default; }
-  .btn--ghost:hover{ transform: none; }
+
+  .btn:focus-visible,
+  #menu-toggle:focus-visible,
+  .menu-item:focus-visible{
+    outline: 2px solid var(--amarillo);
+    outline-offset: 3px;
+  }
+
+  .btn--solid{
+    background: var(--amarillo);
+    color: var(--ink);
+    border-color: var(--amarillo);
+    box-shadow: 0 0 28px rgba(249, 215, 121, 0.28);
+  }
+  .btn--whatsapp{
+    background: #25D366;
+    color: #04200d;
+    border-color: #25D366;
+  }
+  .btn--glass{
+    background: rgba(5, 14, 18, 0.58);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border-color: var(--glass-border);
+  }
+  .btn--pulse{ animation: glowPulse 2.4s ease-in-out infinite; }
+
+  .btn svg{ width: 1.15em; height: 1.15em; flex: none; }
 
   /* ---------------- Introducción (contenido real para SEO) ---------------- */
   .ar-intro{
@@ -174,6 +210,8 @@
     text-decoration: none;
   }
 
+  #startArBtn{ align-self: flex-start; animation: ringPulse 2.6s ease-out infinite; }
+
   /* ---------------- Escena AR ---------------- */
   #arSceneWrap{
     position: fixed;
@@ -191,89 +229,358 @@
 
   a-scene{ width: 100%; height: 100%; }
 
-  /* Menú flotante sobre la vista de cámara */
+  /* ---------------- Cargando cámara ---------------- */
+  .ar-loader{
+    position: fixed;
+    inset: 0;
+    z-index: 25;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.1rem;
+    background: var(--space-deep);
+    transition: opacity 0.5s ease, visibility 0s linear 0.5s;
+  }
+  .ar-loader.is-done{ opacity: 0; visibility: hidden; }
+  .ar-loader .ring{
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 3px solid rgba(35, 206, 217, 0.18);
+    border-top-color: var(--turquesa);
+    animation: spin 1s linear infinite;
+  }
+  .ar-loader p{
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    color: var(--menta);
+  }
+
+  /* ---------------- Error de cámara ---------------- */
+  .ar-error{
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 2rem;
+    text-align: center;
+    background: rgba(5, 10, 16, 0.95);
+  }
+  .ar-error.is-on{ display: flex; }
+  .ar-error h2{ font-size: 1.5rem; }
+  .ar-error p{ margin: 0; max-width: 34ch; line-height: 1.5; opacity: 0.88; }
+  .ar-error__actions{ display: flex; gap: 0.7rem; flex-wrap: wrap; justify-content: center; }
+
+  /* ---------------- Menú flotante (estilo HUD) ---------------- */
   #menu-container{
     position: fixed;
-    top: 1rem;
+    top: calc(1rem + var(--safe-top));
     left: 1rem;
-    z-index: 20;
+    z-index: 30;
   }
 
   #menu-toggle{
-    font-family: var(--font-mono);
-    font-size: 0.8rem;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.9rem;
     color: var(--paper);
-    background: rgba(6, 33, 31, 0.72);
-    backdrop-filter: blur(6px);
-    border: 1.5px solid rgba(246, 241, 231, 0.35);
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
     border-radius: 999px;
-    padding: 0.7em 1.1em;
+    padding: 0.7em 1.1em 0.7em 0.95em;
     cursor: pointer;
+    box-shadow: var(--glow);
+    -webkit-tap-highlight-color: transparent;
   }
 
-  #menu-toggle:hover{ border-color: var(--amarillo); color: var(--amarillo); }
+  .burger{ width: 18px; display: grid; gap: 4px; }
+  .burger i{
+    display: block;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--turquesa);
+    transition: transform 0.25s ease, opacity 0.2s ease;
+  }
+  #menu-toggle[aria-expanded="true"] .burger i:nth-child(1){ transform: translateY(6px) rotate(45deg); }
+  #menu-toggle[aria-expanded="true"] .burger i:nth-child(2){ opacity: 0; }
+  #menu-toggle[aria-expanded="true"] .burger i:nth-child(3){ transform: translateY(-6px) rotate(-45deg); }
 
   #menu-options{
     margin-top: 0.6rem;
+    width: min(80vw, 290px);
+    padding: 0.5rem;
+    display: grid;
+    gap: 0.15rem;
+    background: rgba(5, 12, 16, 0.84);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    border-radius: 18px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5), var(--glow);
+    transform-origin: top left;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+  #menu-options.hidden{
+    opacity: 0;
+    transform: scale(0.96) translateY(-6px);
+    pointer-events: none;
+    visibility: hidden;
+  }
+
+  .menu-head{
+    margin: 0.35rem 0.6rem 0.4rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--menta);
+  }
+  .menu-head .dot{
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--turquesa);
+    box-shadow: 0 0 10px var(--turquesa);
+  }
+
+  .menu-item{
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.8rem 0.75rem;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--paper);
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 0.95rem;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .menu-item:hover{ background: rgba(35, 206, 217, 0.1); }
+  .menu-item svg{
+    width: 20px;
+    height: 20px;
+    flex: none;
+    fill: none;
+    stroke: var(--turquesa);
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .menu-item--wa svg{ stroke: #25D366; }
+  .menu-item .grow{ flex: 1; display: grid; gap: 0.1rem; }
+  .menu-sub{ font-size: 0.76rem; font-weight: 400; opacity: 0.6; }
+
+  .switch-ui{
+    position: relative;
+    flex: none;
+    width: 42px;
+    height: 24px;
+    border-radius: 999px;
+    background: rgba(246, 241, 231, 0.18);
+    transition: background 0.2s ease;
+  }
+  .switch-ui::after{
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--paper);
+    transition: transform 0.2s ease, background 0.2s ease;
+  }
+  #musicSwitch[aria-checked="true"] .switch-ui{ background: var(--turquesa); }
+  #musicSwitch[aria-checked="true"] .switch-ui::after{ transform: translateX(18px); background: var(--ink); }
+  #musicSwitch:disabled{ opacity: 0.45; cursor: not-allowed; }
+
+  /* ---------------- Estado de la RA (arriba a la derecha) ---------------- */
+  .status-chip{
+    position: fixed;
+    top: calc(1rem + var(--safe-top));
+    right: 1rem;
+    z-index: 30;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    max-width: calc(100vw - 9.5rem);
+    padding: 0.55em 0.95em;
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    color: var(--paper);
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: 999px;
+  }
+  .status-chip .dot{
+    flex: none;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--amarillo);
+    box-shadow: 0 0 10px var(--amarillo);
+  }
+  .status-chip[data-state="scanning"] .dot{
+    background: var(--turquesa);
+    box-shadow: 0 0 10px var(--turquesa);
+    animation: blink 1.4s ease-in-out infinite;
+  }
+  .status-chip[data-state="tracking"] .dot{ background: #3DF08A; box-shadow: 0 0 12px #3DF08A; }
+  .status-chip[data-state="error"] .dot{ background: var(--peach); box-shadow: 0 0 10px var(--peach); }
+  #statusText{ white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ---------------- Retícula de escaneo ---------------- */
+  .scan-hud{
+    position: fixed;
+    inset: 0;
+    z-index: 15;
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
-    background: rgba(6, 33, 31, 0.85);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(246, 241, 231, 0.2);
-    border-radius: 14px;
-    padding: 0.9rem;
-    width: min(78vw, 260px);
-  }
-
-  #menu-options.hidden{ display: none; }
-
-  #menu-options .btn{ width: 100%; justify-content: center; }
-
-  .ar-instructions{
-    position: fixed;
-    left: 50%;
-    bottom: 1.2rem;
-    transform: translateX(-50%);
-    z-index: 20;
-    background: rgba(6, 33, 31, 0.78);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(246, 241, 231, 0.2);
-    border-radius: 14px;
-    padding: 0.8rem 1.2rem;
-    font-size: 0.82rem;
-    text-align: center;
-    max-width: min(90vw, 380px);
-  }
-
-  .ar-instructions[hidden]{ display: none; }
-
-  /* ---------------- CTA final — aparece solo cuando sale el logo 3D ---------------- */
-  #arCtaBottom{
-    position: fixed;
-    left: 50%;
-    bottom: 1.4rem;
-    transform: translateX(-50%) translateY(0);
-    z-index: 21;
-    opacity: 1;
-    transition: opacity 0.4s ease, transform 0.4s ease;
-  }
-
-  #arCtaBottom[hidden]{
-    display: flex;
-    opacity: 0;
-    transform: translateX(-50%) translateY(12px);
+    align-items: center;
+    justify-content: center;
+    gap: 1.3rem;
     pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.45s ease, visibility 0s linear 0.45s;
+  }
+  .scan-hud.is-on{
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.3s ease;
   }
 
-  #arCtaBottom .btn{
-    box-shadow: 0 6px 0 rgba(0,0,0,0.35);
+  .scan-frame{
+    position: relative;
+    width: min(66vw, 300px);
+    aspect-ratio: 1.45 / 1;
+    transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .scan-frame .c{
+    position: absolute;
+    width: 34px;
+    height: 34px;
+    border: 3px solid var(--turquesa);
+    filter: drop-shadow(0 0 8px rgba(35, 206, 217, 0.7));
+    transition: border-color 0.3s ease, filter 0.3s ease;
+  }
+  .c.tl{ top: 0; left: 0; border-right: 0; border-bottom: 0; border-top-left-radius: 10px; }
+  .c.tr{ top: 0; right: 0; border-left: 0; border-bottom: 0; border-top-right-radius: 10px; }
+  .c.bl{ bottom: 0; left: 0; border-right: 0; border-top: 0; border-bottom-left-radius: 10px; }
+  .c.br{ bottom: 0; right: 0; border-left: 0; border-top: 0; border-bottom-right-radius: 10px; }
+
+  .scan-line{
+    position: absolute;
+    left: 8%;
+    right: 8%;
+    top: 8%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--turquesa), transparent);
+    box-shadow: 0 0 14px var(--turquesa);
+    animation: sweep 2.2s ease-in-out infinite alternate;
+  }
+
+  /* La tarjeta se "engancha": los marcos se cierran y cambian a amarillo */
+  .scan-hud.is-locked .scan-frame{ transform: scale(0.8); }
+  .scan-hud.is-locked .c{
+    border-color: var(--amarillo);
+    filter: drop-shadow(0 0 10px rgba(249, 215, 121, 0.85));
+  }
+  .scan-hud.is-locked .scan-line{ opacity: 0; animation: none; }
+
+  .scan-title{
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.85);
+  }
+  .scan-copy{
+    margin: -0.7rem 0 0;
+    max-width: 30ch;
+    text-align: center;
+    font-size: 0.95rem;
+    line-height: 1.45;
+    text-shadow: 0 1px 12px rgba(0, 0, 0, 0.85);
+  }
+
+  /* ---------------- Botones de venta (aparecen 5 s después del modelo) ---------------- */
+  .cta-dock{
+    position: fixed;
+    left: 50%;
+    bottom: calc(0.9rem + var(--safe-bottom));
+    z-index: 30;
+    width: min(94vw, 520px);
+    display: grid;
+    gap: 0.7rem;
+    justify-items: center;
+    text-align: center;
+    padding: 1.6rem 0.9rem 0.3rem;
+    border-radius: 28px;
+    background: linear-gradient(to top, rgba(5, 10, 16, 0.8) 55%, rgba(5, 10, 16, 0));
+    transform: translate(-50%, 18px);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), visibility 0s linear 0.5s;
+  }
+  .cta-dock.is-visible{
+    transform: translate(-50%, 0);
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .cta-hook{
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    text-shadow: 0 2px 16px rgba(0, 0, 0, 0.85);
+  }
+  .cta-row{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    justify-content: center;
+    width: 100%;
+  }
+  .cta-row .btn{ flex: 1 1 200px; }
+
+  /* ---------------- Animaciones ---------------- */
+  @keyframes spin{ to{ transform: rotate(360deg); } }
+  @keyframes blink{ 0%, 100%{ opacity: 1; } 50%{ opacity: 0.35; } }
+  @keyframes sweep{ from{ top: 8%; } to{ top: 92%; } }
+  @keyframes glowPulse{
+    0%, 100%{ box-shadow: 0 0 22px rgba(37, 211, 102, 0.3); }
+    50%{ box-shadow: 0 0 42px rgba(37, 211, 102, 0.62); }
+  }
+  @keyframes ringPulse{
+    0%{ box-shadow: 0 0 0 0 rgba(249, 215, 121, 0.5); }
+    70%, 100%{ box-shadow: 0 0 0 16px rgba(249, 215, 121, 0); }
   }
 
   @media (prefers-reduced-motion: reduce){
-    *{ animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+    *, *::before, *::after{ animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
   }
 </style>
 </head>
@@ -282,7 +589,7 @@
 <!-- ============================================================
      INTRODUCCIÓN — contenido real de servicio (SEO), visible antes
      de pedir permiso de cámara. Al tocar "Iniciar cámara" se muestra
-     la escena AR y se activa la cámara del teléfono.
+     la escena AR, se activa la cámara y arranca la música.
      ============================================================ -->
 <main class="ar-intro" id="arIntro">
   <a class="ar-intro__back" href="../index.html">← Volver a Reality Studio</a>
@@ -296,133 +603,157 @@
   </p>
   <ol class="ar-intro__steps">
     <li>Toca "Iniciar cámara" y acepta el permiso de tu navegador.</li>
-    <li>Apunta la cámara a cualquiera de nuestras tarjetas de demostración.</li>
-    <li>Espera unos segundos: verás la tarjeta animarse y modelos 3D de Reality Studio aparecer flotando.</li>
+    <li>Apunta la cámara a una de nuestras tarjetas de demostración.</li>
+    <li>Mantén el celular firme unos segundos: un modelo 3D aparecerá flotando sobre la tarjeta.</li>
   </ol>
   <button class="btn btn--solid" id="startArBtn" type="button">Iniciar cámara y ver la RA</button>
-  <p class="ar-intro__note">Necesitamos acceso a tu cámara solo mientras usas esta página — no se graba ni se guarda nada.</p>
+  <p class="ar-intro__note">Necesitamos acceso a tu cámara solo mientras usas esta página — no se graba ni se guarda nada. Sube el volumen de tu celular: la experiencia incluye música.</p>
 </main>
+
+<!-- ============================================================
+     MÚSICA DE LA EXPERIENCIA
+     🔧 PLACEHOLDER: cambia el src por la ruta real del mismo audio que
+     suena en la página principal (ej. ../assets/audio/tu-audio.mp3).
+     Si el archivo no existe, el interruptor de música del menú se
+     desactiva solo y no se rompe nada más.
+     ============================================================ -->
+<audio id="bgm" src="../audio/Digital Zenith.mp3" loop preload="auto"></audio>
 
 <!-- ============================================================
      ESCENA AR — se muestra solo después de "Iniciar cámara"
      ============================================================ -->
 <div id="arSceneWrap">
 
+  <!-- Cargando cámara -->
+  <div class="ar-loader" id="arLoader">
+    <div class="ring"></div>
+    <p>Iniciando cámara</p>
+  </div>
+
+  <!-- Error de cámara -->
+  <div class="ar-error" id="arError" role="alert">
+    <h2>No pudimos usar tu cámara</h2>
+    <p>Revisa que el navegador tenga permiso de cámara para este sitio y vuelve a intentarlo.</p>
+    <div class="ar-error__actions">
+      <button class="btn btn--solid" id="retryBtn" type="button">Reintentar</button>
+      <a class="btn" href="../index.html">Volver al inicio</a>
+    </div>
+  </div>
+
+  <!-- Estado de la RA -->
+  <div class="status-chip" id="statusChip" data-state="loading" role="status" aria-live="polite">
+    <span class="dot"></span>
+    <span id="statusText">Iniciando cámara</span>
+  </div>
+
+  <!-- Retícula de escaneo -->
+  <div class="scan-hud" id="scanHud" aria-hidden="true">
+    <div class="scan-frame">
+      <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+      <span class="scan-line"></span>
+    </div>
+    <p class="scan-title">Apunta a la tarjeta</p>
+    <p class="scan-copy">Centra la tarjeta en el marco y mantén el celular firme unos segundos.</p>
+  </div>
+
   <!-- Menú flotante -->
   <div id="menu-container">
-    <button id="menu-toggle" type="button">☰ Menú</button>
-    <div id="menu-options" class="hidden">
-      <a class="btn" href="../index.html">🏠 Volver al home</a>
-      <!-- 🔧 "Otras tarjetas": hoy solo existe esta experiencia real.
-           Cuando compiles el .mind de una segunda tarjeta, reemplaza estos
-           dos botones por enlaces reales a sus páginas WebAR. -->
-      <button class="btn btn--ghost" type="button" disabled>🃏 Otra tarjeta — próximamente</button>
-      <button class="btn btn--ghost" type="button" disabled>🃏 Otra tarjeta — próximamente</button>
-      <a class="btn btn--whatsapp"
-         href="https://wa.me/573173020116?text=Hola%20Reality%20Studio%2C%20me%20gustar%C3%ADa%20explorar%20c%C3%B3mo%20puedo%20aplicar%20la%20Realidad%20Aumentada%20a%20mi%20producto%20o%20proyecto."
-         target="_blank" rel="noopener">
-        Escríbenos por WhatsApp
+    <button id="menu-toggle" type="button" aria-expanded="false" aria-controls="menu-options">
+      <span class="burger" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span>Menú</span>
+    </button>
+
+    <nav id="menu-options" class="hidden" aria-label="Menú de la experiencia">
+      <p class="menu-head"><span class="dot"></span>Reality Studio</p>
+
+      <a class="menu-item" href="../index.html">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+        <span class="grow">Inicio</span>
+      </a>
+
+      <a class="menu-item menu-item--wa" id="menuWa" href="#" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>
+        <span class="grow">Escribir por WhatsApp</span>
+      </a>
+
+      <button class="menu-item" id="musicSwitch" type="button" role="switch" aria-checked="true">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 9a4 4 0 0 1 0 6"/><path d="M18.5 6.5a8 8 0 0 1 0 11"/></svg>
+        <span class="grow">Música<span class="menu-sub" id="musicSub">Activada</span></span>
+        <span class="switch-ui" aria-hidden="true"></span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Botones de venta — aparecen 5 s después de ver el modelo -->
+  <div class="cta-dock" id="ctaDock" aria-hidden="true">
+    <p class="cta-hook">¿Te imaginas esto con tu marca?</p>
+    <div class="cta-row">
+      <a class="btn btn--whatsapp btn--pulse" id="ctaWa" href="#" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>
+        Quiero esto para mi marca
+      </a>
+      <a class="btn btn--glass" id="ctaSite" href="https://realitystudio.lat" target="_blank" rel="noopener">
+        Conocer Reality Studio
       </a>
     </div>
   </div>
 
-  <p class="ar-instructions" id="arInstructions">Apunta la cámara a cualquiera de nuestras tarjetas de demostración</p>
-
-  <!-- CTA final — oculto hasta que aparece el logo 3D (ver script abajo) -->
-  <a class="btn btn--solid" id="arCtaBottom" href="https://wa.me/573173020116?text=Hola%20Reality%20Studio%2C%20quiero%20cotizar%20mi%20tarjeta%20con%20Realidad%20Aumentada" target="_blank" rel="noopener" hidden>
-    ¿Te gustó? Cotiza tu tarjeta
-  </a>
-
+  <!-- ============================================================
+       Un solo archivo .mind con 3 tracks:
+       targetIndex 0, 1 y 2 = orden en que compilaste las imágenes.
+       autoStart: false → la cámara se pide al tocar "Iniciar cámara".
+       uiLoading / uiScanning / uiError: no → usamos nuestra propia interfaz.
+       ============================================================ -->
   <a-scene id="arScene"
-           mindar-image="imageTargetSrc: ../targets/tres-en-uno.mind;
+           mindar-image="imageTargetSrc: ../targets/targets_2026.mind;
+                         autoStart: false;
+                         maxTrack: 1;
                          filterMinCF: 0.0001;
                          filterBeta: 0.01;
                          missTolerance: 5;
-                         uiScanning: no"
+                         uiLoading: no;
+                         uiScanning: no;
+                         uiError: no"
            color-space="sRGB"
            renderer="colorManagement: true, physicallyCorrectLights"
            vr-mode-ui="enabled: false"
            device-orientation-permission-ui="enabled: false"
            embedded>
-    <a-assets>
-      <!-- ---- Track 0 — Tarjeta corporativa (targetIndex: 0) ---- -->
-      <img id="card1" src="../img/tarjeta_01.png" />
-      <img id="card2" src="../img/tarjeta_02.png" />
-      <a-asset-item id="rsModel" src="../models/Logo-Reality-Animado.glb"></a-asset-item>
-
-      <!-- ---- Track 1 — Constructora (targetIndex: 1) ----
-           🔧 PLACEHOLDER: mientras subes los archivos reales, estos 2
-           modelos apuntan al mismo .glb que ya existe (Logo-Reality-Animado)
-           solo para poder probar la secuencia completa de 2 modelos sin 404.
-           Cuando tengas los archivos reales, cambia ÚNICAMENTE el atributo
-           src de cada línea de abajo:
-             - planoModel     → ../models/plano.glb
-             - logoConstructoraModel → ../models/contructora_logo.glb
-           (respeta el nombre exacto que ya usaste al subir el archivo,
-           incluida la falta de "s" en "contructora_logo" si así lo subiste). -->
-      <a-asset-item id="planoModel" src="../models/Logo-Reality-Animado.glb"></a-asset-item>
-      <a-asset-item id="logoConstructoraModel" src="../models/Logo-Reality-Animado.glb"></a-asset-item>
-
-      <!-- ---- Track 2 — Concesionario (targetIndex: 2) ----
-           🔧 PLACEHOLDER: mismo caso que arriba. Cuando tengas los archivos
-           reales, cambia ÚNICAMENTE el atributo src de cada línea:
-             - concesionarioModel     → ../models/concesionario.glb
-             - logoConcesionarioModel → ../models/concesionario_logo.glb -->
-      <a-asset-item id="concesionarioModel" src="../models/Logo-Reality-Animado.glb"></a-asset-item>
-      <a-asset-item id="logoConcesionarioModel" src="../models/Logo-Reality-Animado.glb"></a-asset-item>
+    <!-- timeout alto: el BMW puede pesar varios MB y en 4G tarda más de los 3 s por defecto -->
+    <a-assets timeout="30000">
+      <a-asset-item id="logoModel" src="../models/logo_reality_animado.glb"></a-asset-item>
+      <a-asset-item id="planoModel" src="../models/plano_02.glb"></a-asset-item>
+      <a-asset-item id="bmwModel" src="../models/bmw_x7.glb"></a-asset-item>
     </a-assets>
+
     <a-light type="ambient" color="#ffffff" intensity="0.9"></a-light>
     <a-light type="directional" color="#ffffff" intensity="0.6" position="0 1 1"></a-light>
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <!-- ================= TRACK 0 — Tarjeta corporativa ================= -->
-    <a-entity id="arTarget0" mindar-image-target="targetIndex: 0">
-      <!-- Paso 1 — primera imagen de la tarjeta (visible al reconocer el target) -->
-      <a-plane id="stepCard1" src="#card1" position="0 0 0" height="0.552" width="1"
-               rotation="0 0 0" scale="1 1 1" visible="false"></a-plane>
+    <!-- 🔧 Cada modelo conserva los valores de escala/posición que ya tenías
+         probados. Si el plano o el BMW se ven muy grandes, pequeños o fuera
+         de lugar, ajusta solo scale y position de la entidad correspondiente. -->
 
-      <!-- Paso 2 — segunda imagen de la tarjeta -->
-      <a-plane id="stepCard2" src="#card2" position="0 0 0" height="0.552" width="1"
-               rotation="0 0 0" scale="1 1 1" visible="false"></a-plane>
-
-      <!-- Paso 3 — logo 3D de Reality Studio, se queda visible mientras el
-           target siga en cámara -->
-      <a-gltf-model id="stepModel0" rotation="0 0 0" position="0 0 0" scale="0.3 0.3 0.3"
-                    src="#rsModel" visible="false"
-                    animation="property: position; to: 0 -0.2 0; dur: 700;
+    <!-- TRACK 0 — Logo de Reality Studio -->
+    <a-entity id="arTarget0" mindar-image-target="targetIndex: 2">
+      <a-gltf-model id="model0" rotation="0 0 0" position="0 0 0" scale="0.3 0.3 0.3"
+                    src="#logoModel"
+                    animation="property: position; to: 0 0 0; dur: 700;
                                easing: easeInOutQuad; loop: true; dir: alternate">
       </a-gltf-model>
     </a-entity>
 
-    <!-- ================= TRACK 1 — Constructora ================= -->
+    <!-- TRACK 1 — Plano -->
     <a-entity id="arTarget1" mindar-image-target="targetIndex: 1">
-      <!-- Paso 1 — primer modelo (plano.glb, cuando esté subido) -->
-      <a-gltf-model id="stepPlano" rotation="0 0 0" position="0 -0.2 0.8" scale="0.6 0.6 0.6"
-                    src="#planoModel" visible="false">
-      </a-gltf-model>
-
-      <!-- Paso 2 — segundo modelo (logo de constructora), se queda visible
-           mientras el target siga en cámara -->
-      <a-gltf-model id="stepLogoConstructora" rotation="0 0 0" position="0 -0.2 0.8" scale="0.6 0.6 0.6"
-                    src="#logoConstructoraModel" visible="false"
-                    animation="property: position; to: 0 -0.5 0.8; dur: 1000;
-                               easing: easeInOutQuad; loop: true; dir: alternate">
+      <a-gltf-model id="model1" rotation="90 0 0" position="0 0 0.5" scale="0.08 0.08 0.08"
+                    src="#planoModel">
       </a-gltf-model>
     </a-entity>
 
-    <!-- ================= TRACK 2 — Concesionario ================= -->
-    <a-entity id="arTarget2" mindar-image-target="targetIndex: 2">
-      <!-- Paso 1 — primer modelo (concesionario.glb, cuando esté subido) -->
-      <a-gltf-model id="stepConcesionario" rotation="0 0 0" position="0 -0.2 0.8" scale="0.6 0.6 0.6"
-                    src="#concesionarioModel" visible="false">
-      </a-gltf-model>
-
-      <!-- Paso 2 — segundo modelo (logo de concesionario), se queda visible
-           mientras el target siga en cámara -->
-      <a-gltf-model id="stepLogoConcesionario" rotation="0 0 0" position="0 -0.2 0.8" scale="0.6 0.6 0.6"
-                    src="#logoConcesionarioModel" visible="false"
-                    animation="property: position; to: 0 -0.5 0.8; dur: 1000;
-                               easing: easeInOutQuad; loop: true; dir: alternate">
+    <!-- TRACK 2 — BMW X7 -->
+    <a-entity id="arTarget2" mindar-image-target="targetIndex: 0">
+      <a-gltf-model id="model2" rotation="90 0 0" position="0 0 0.4" scale="0.4 0.4 0.4"
+                    src="#bmwModel">
       </a-gltf-model>
     </a-entity>
   </a-scene>
@@ -431,98 +762,272 @@
 <script>
   (() => {
     'use strict';
-    const intro = document.getElementById('arIntro');
-    const sceneWrap = document.getElementById('arSceneWrap');
-    const startBtn = document.getElementById('startArBtn');
-    const menuToggle = document.getElementById('menu-toggle');
-    const menuOptions = document.getElementById('menu-options');
-    const instructions = document.getElementById('arInstructions');
-    const ctaBottom = document.getElementById('arCtaBottom');
-    const target0 = document.getElementById('arTarget0');
-    const stepCard1 = document.getElementById('stepCard1');
-    const stepCard2 = document.getElementById('stepCard2');
-    const stepModel0 = document.getElementById('stepModel0');
 
-    const target1 = document.getElementById('arTarget1');
-    const stepPlano = document.getElementById('stepPlano');
-    const stepLogoConstructora = document.getElementById('stepLogoConstructora');
+    /* ================================================================
+       AJUSTES EDITABLES
+       ================================================================ */
+    const WHATSAPP_NUMBER   = '573173020116';
+    const SITE_URL          = 'https://realitystudio.lat';
+    const CTA_DELAY_MS      = 5000;   // segundos (en ms) entre ver el modelo y mostrar los botones
+    const CTA_HIDE_GRACE_MS = 1500;   // si se pierde el tracking, los botones esperan este tiempo antes de ocultarse
+    const MUSIC_VOLUME      = 0.55;   // 0 a 1 (iOS ignora el volumen por código)
 
-    const target2 = document.getElementById('arTarget2');
-    const stepConcesionario = document.getElementById('stepConcesionario');
-    const stepLogoConcesionario = document.getElementById('stepLogoConcesionario');
+    // 🔧 El orden debe coincidir con targetIndex dentro de targets_2026.mind.
+    // "name" se muestra al usuario y viaja en el mensaje de WhatsApp.
+    const TRACKS = [
+      { targetId: 'arTarget0', name: 'Logo Reality Studio' },
+      { targetId: 'arTarget1', name: 'Plano 3D' },
+      { targetId: 'arTarget2', name: 'BMW X7' }
+    ];
+    /* ================================================================ */
 
-    // ---------------- Intro → escena AR ----------------
-    startBtn.addEventListener('click', () => {
-      intro.hidden = true;
-      sceneWrap.classList.add('is-active');
-    });
+    const $ = (id) => document.getElementById(id);
 
-    // ---------------- Menú flotante ----------------
-    menuToggle.addEventListener('click', () => {
-      menuOptions.classList.toggle('hidden');
-    });
+    const intro        = $('arIntro');
+    const sceneWrap    = $('arSceneWrap');
+    const sceneEl      = $('arScene');
+    const startBtn     = $('startArBtn');
+    const loader       = $('arLoader');
+    const errorPanel   = $('arError');
+    const retryBtn     = $('retryBtn');
+    const statusChip   = $('statusChip');
+    const statusText   = $('statusText');
+    const scanHud      = $('scanHud');
+    const ctaDock      = $('ctaDock');
+    const ctaWa        = $('ctaWa');
+    const ctaSite      = $('ctaSite');
+    const menuWa       = $('menuWa');
+    const menuContainer = $('menu-container');
+    const menuToggle   = $('menu-toggle');
+    const menuOptions  = $('menu-options');
+    const musicSwitch  = $('musicSwitch');
+    const musicSub     = $('musicSub');
+    const bgm          = $('bgm');
 
-    // ---------------- Secuencia genérica, reutilizada por los 3 tracks ----------------
-    // Cada track pasa su propia lista de pasos (elementos <a-*> a mostrar en
-    // orden) y el tiempo que dura cada uno ANTES de pasar al siguiente. El
-    // último paso de la lista se queda visible indefinidamente (hasta perder
-    // el tracking) y dispara el CTA compartido — igual que el comportamiento
-    // ya validado del track de la tarjeta corporativa.
-    // 🔧 Para ajustar cuánto dura cada paso, edita STEP_DURATION_MS — aplica
-    // por igual a los 3 tracks.
-    const STEP_DURATION_MS = 3000;
+    let started = false;
+    let cameraStarted = false;
+    let activeTrack = null;
+    let ctaVisible = false;
+    let showTimer = null;
+    let hideTimer = null;
+    let lockTimer = null;
 
-    function createTrackSequence(target, steps) {
-      let timers = [];
-
-      function clearTimers() {
-        timers.forEach((id) => window.clearTimeout(id));
-        timers = [];
-      }
-
-      function showOnly(activeEl) {
-        steps.forEach((el) => el.setAttribute('visible', el === activeEl));
-      }
-
-      function hideAll() {
-        steps.forEach((el) => el.setAttribute('visible', false));
-      }
-
-      function start() {
-        clearTimers();
-        showOnly(steps[0]);
-        if (instructions) instructions.hidden = true;
-        if (ctaBottom) ctaBottom.hidden = true;
-
-        for (let i = 1; i < steps.length; i += 1) {
-          const isLast = i === steps.length - 1;
-          const id = window.setTimeout(() => {
-            showOnly(steps[i]);
-            if (isLast && ctaBottom) ctaBottom.hidden = false;
-          }, STEP_DURATION_MS * i);
-          timers.push(id);
-        }
-      }
-
-      function reset() {
-        clearTimers();
-        hideAll();
-        if (ctaBottom) ctaBottom.hidden = true;
-        if (instructions) instructions.hidden = false;
-      }
-
-      target.addEventListener('targetFound', start);
-      target.addEventListener('targetLost', reset);
+    /* ---------------- WhatsApp: mensaje según el modelo que vio el usuario ---------------- */
+    function waUrl(trackName) {
+      const text = trackName
+        ? `Hola Reality Studio, acabo de probar la demo de Realidad Aumentada (${trackName}) y quiero cotizar una experiencia así para mi marca.`
+        : 'Hola Reality Studio, me gustaría explorar cómo puedo aplicar la Realidad Aumentada a mi producto o proyecto.';
+      return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
     }
 
-    // Track 0 — Tarjeta corporativa: imagen 1 → imagen 2 → logo 3D
-    createTrackSequence(target0, [stepCard1, stepCard2, stepModel0]);
+    function updateLinks(trackName) {
+      const url = waUrl(trackName);
+      ctaWa.href = url;
+      menuWa.href = url;
+      ctaSite.href = SITE_URL;
+    }
+    updateLinks(null);
 
-    // Track 1 — Constructora: modelo "plano" → logo de constructora
-    createTrackSequence(target1, [stepPlano, stepLogoConstructora]);
+    /* ---------------- Estado visible de la RA ---------------- */
+    function setStatus(state, label) {
+      statusChip.dataset.state = state;
+      const texts = {
+        loading:  'Iniciando cámara',
+        scanning: 'Buscando tarjeta',
+        tracking: `Detectado: ${label || ''}`,
+        error:    'Sin acceso a la cámara'
+      };
+      statusText.textContent = texts[state] || '';
+    }
 
-    // Track 2 — Concesionario: modelo "concesionario" → logo de concesionario
-    createTrackSequence(target2, [stepConcesionario, stepLogoConcesionario]);
+    function showScanHud() {
+      window.clearTimeout(lockTimer);
+      scanHud.classList.remove('is-locked');
+      scanHud.classList.add('is-on');
+    }
+
+    function lockScanHud() {
+      scanHud.classList.add('is-locked');
+      window.clearTimeout(lockTimer);
+      lockTimer = window.setTimeout(() => scanHud.classList.remove('is-on'), 450);
+    }
+
+    function hideScanHud() {
+      window.clearTimeout(lockTimer);
+      scanHud.classList.remove('is-on', 'is-locked');
+    }
+
+    /* ---------------- Botones de venta ---------------- */
+    function showCta() {
+      ctaVisible = true;
+      ctaDock.classList.add('is-visible');
+      ctaDock.setAttribute('aria-hidden', 'false');
+    }
+
+    function hideCta() {
+      ctaVisible = false;
+      ctaDock.classList.remove('is-visible');
+      ctaDock.setAttribute('aria-hidden', 'true');
+    }
+
+    /* ---------------- Eventos de tracking ---------------- */
+    function onFound(track) {
+      window.clearTimeout(hideTimer);
+      hideTimer = null;
+      activeTrack = track;
+      setStatus('tracking', track.name);
+      lockScanHud();
+      updateLinks(track.name);
+
+      if (!ctaVisible && showTimer === null) {
+        showTimer = window.setTimeout(() => {
+          showTimer = null;
+          showCta();
+        }, CTA_DELAY_MS);
+      }
+    }
+
+    function onLost(track) {
+      if (activeTrack !== track) return;
+      window.clearTimeout(showTimer);
+      showTimer = null;
+      setStatus('scanning');
+      showScanHud();
+
+      // Pequeña tolerancia: si el tracking se corta un instante, los botones no parpadean.
+      hideTimer = window.setTimeout(() => {
+        hideTimer = null;
+        hideCta();
+        activeTrack = null;
+        updateLinks(null);
+      }, CTA_HIDE_GRACE_MS);
+    }
+
+    TRACKS.forEach((track) => {
+      const el = $(track.targetId);
+      el.addEventListener('targetFound', () => onFound(track));
+      el.addEventListener('targetLost', () => onLost(track));
+    });
+
+    /* ---------------- Cámara / MindAR ---------------- */
+    function showError() {
+      loader.classList.add('is-done');
+      hideScanHud();
+      hideCta();
+      setStatus('error');
+      errorPanel.classList.add('is-on');
+    }
+
+    function startCamera() {
+      if (cameraStarted) return;
+      const system = sceneEl.systems && sceneEl.systems['mindar-image-system'];
+      if (!system) { showError(); return; }
+      cameraStarted = true;
+      system.start();
+    }
+
+    sceneEl.addEventListener('arReady', () => {
+      loader.classList.add('is-done');
+      setStatus('scanning');
+      showScanHud();
+    });
+    sceneEl.addEventListener('arError', showError);
+    retryBtn.addEventListener('click', () => window.location.reload());
+
+    /* ---------------- Música ---------------- */
+    let musicWanted = true;
+    let musicBroken = false;
+    let fadeRaf = 0;
+
+    function setMusicUi() {
+      musicSwitch.setAttribute('aria-checked', String(musicWanted && !musicBroken));
+      musicSub.textContent = musicBroken ? 'No disponible' : (musicWanted ? 'Activada' : 'Silenciada');
+    }
+
+    function fadeVolume(to, ms, done) {
+      window.cancelAnimationFrame(fadeRaf);
+      const from = bgm.volume;
+      const t0 = performance.now();
+      const step = (now) => {
+        const p = Math.min(1, (now - t0) / ms);
+        bgm.volume = from + (to - from) * p;
+        if (p < 1) fadeRaf = window.requestAnimationFrame(step);
+        else if (done) done();
+      };
+      fadeRaf = window.requestAnimationFrame(step);
+    }
+
+    function startMusic() {
+      if (musicBroken || !musicWanted) return;
+      bgm.volume = 0;
+      const playing = bgm.play();
+      if (playing && playing.then) {
+        playing.then(() => fadeVolume(MUSIC_VOLUME, 1500)).catch(() => {});
+      }
+    }
+
+    function stopMusic() {
+      fadeVolume(0, 300, () => bgm.pause());
+    }
+
+    bgm.addEventListener('error', () => {
+      musicBroken = true;
+      musicSwitch.disabled = true;
+      setMusicUi();
+    });
+
+    musicSwitch.addEventListener('click', () => {
+      musicWanted = !musicWanted;
+      setMusicUi();
+      if (musicWanted) startMusic(); else stopMusic();
+    });
+
+    // Si el usuario cambia de app (por ejemplo, abre WhatsApp), la música se pausa y vuelve al regresar.
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        bgm.pause();
+      } else if (started && musicWanted && !musicBroken) {
+        bgm.play().catch(() => {});
+      }
+    });
+
+    /* ---------------- Menú flotante ---------------- */
+    function setMenu(open) {
+      menuOptions.classList.toggle('hidden', !open);
+      menuToggle.setAttribute('aria-expanded', String(open));
+    }
+
+    menuToggle.addEventListener('click', (event) => {
+      event.stopPropagation();
+      setMenu(menuOptions.classList.contains('hidden'));
+    });
+
+    document.addEventListener('click', (event) => {
+      if (!menuContainer.contains(event.target)) setMenu(false);
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') setMenu(false);
+    });
+
+    /* ---------------- Intro → escena AR ---------------- */
+    startBtn.addEventListener('click', () => {
+      if (started) return;
+      started = true;
+
+      intro.hidden = true;
+      sceneWrap.classList.add('is-active');
+      setStatus('loading');
+
+      // El toque en este botón cuenta como interacción: aquí sí se permite el audio.
+      startMusic();
+
+      if (sceneEl.renderStarted) {
+        startCamera();
+      } else {
+        sceneEl.addEventListener('renderstart', startCamera, { once: true });
+      }
+    });
   })();
 </script>
 
